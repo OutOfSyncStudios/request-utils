@@ -27,7 +27,7 @@
   },
   "homepage": "https://github.com/MediaXPost/request-utils#readme",
   "dependencies": {
-    "@mediaxpost/lodashext": "^1.0.0",
+    "@mediaxpost/lodashext": "^1.1.0",
     "@mediaxpost/validation-helper": "^1.0.0"
   },
   "devDependencies": {

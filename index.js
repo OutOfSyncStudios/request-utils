@@ -14,13 +14,38 @@ const validator = require('@mediaxpost/validation-helper');
 class ReqUtils {
   constructor(req, options) {
     this.options = {
-      checkPermissions: ((req) => { return true; }),
-      customErrorCodes: {},
-      customErrorMessages: {},
+      checkPermissions: ((_req) => { return true; }),
+      customErrorResponseCodes: {},
+      customResponseMessages: {
+        [200000]: { summary: 'OK', message: '', status: 200 },
+        [400000]: { summary: 'Bad Request', message: 'The request is malformed.', status: 400 },
+        [400001]: {
+          summary: 'Missing Parameters',
+          message: 'The request is missing required parameters.',
+          status: 400
+        },
+        [400002]: { summary: 'Non-Existent Record', message: 'The record requested does not exist.', status: 400 },
+        [401000]: { summary: 'Unauthorized', message: 'This request is not authorized.', status: 401 },
+        [403000]: {
+          summary: 'Forbidden',
+          message: 'The credentials provided are not authorized for this request',
+          status: 403
+        },
+        [403001]: { summary: 'Forbidden', message: 'Secure endpoints can only be accessed via HTTPS.', status: 403 },
+        [408000]: { summary: 'Timed Out', message: 'The request timed out.', status: 408 },
+        [429000]: { summary: 'Rate Limit', message: 'Rate limit has been exceeded', status: 429 },
+        [500000]: { summary: 'Could Not Connect', message: 'The server connection timed out', status: 500 },
+        [500001]: { summary: 'General Server Error', message: 'A fatal error has occurred on the server.', status: 500 }
+      },
       defaultAuthContext: { super: false, signed: false, server: false, client: false }
-    }
+    };
     this.req = req;
     __.merge(this.options, options || {});
+  }
+
+  setSkipAuth(value, req) {
+    req = req || this.req;
+    req.skipAuth = __.bool(value);
   }
 
   skipAuth(req) {
@@ -28,9 +53,10 @@ class ReqUtils {
     return req && req.skipAuth;
   }
 
-  hasResponse(req) {
+  setTimedout(req) {
     req = req || this.req;
-    return req && (req.hasData || req.hasError || req.timedout);
+    req.timedout = true;
+    req.respCode = 429000;
   }
 
   setError(code, req) {
@@ -45,37 +71,41 @@ class ReqUtils {
     req.data = data;
   }
 
+  hasResponse(req) {
+    req = req || this.req;
+    return req && (req.hasData || req.hasError || req.timedout);
+  }
+
   setAuthContext(authContext, req) {
     req = req || this.req;
 
-    if (__.isUnset(req.securityContext)) {
-      req.securityContext = this.options.defaultAuthContext;
+    if (__.isUnset(req.authContext)) {
+      req.authContext = this.options.defaultAuthContext;
     }
 
-    req.securityContext = __.merge(Object.assign({}, this.options.defaultAuthContext), authContext);
+    req.authContext = __.merge(Object.assign({}, this.options.defaultAuthContext), authContext);
   }
 
   updateAuthContext(authContext, req) {
     req = req || this.req;
 
-    if (__.isUnset(req.securityContext)) {
-      req.securityContext = this.options.defaultAuthContext;
+    if (__.isUnset(req.authContext)) {
+      req.authContext = this.options.defaultAuthContext;
     }
 
-    __.merge(req.securityContext, authContext);
+    __.merge(req.authContext, authContext);
   }
 
   checkAuthContext(options, req) {
     req = req || this.req;
+    let test = true;
 
     // Set defaults where empty
     options = __.merge(Object.assign({}, this.options.defaultAuthContext), options);
-    const secCon = __.merge(Object.assign({}, this.options.defaultAuthContext), req.securityContext);
-
-    let test = true;
+    const secCon = __.merge(Object.assign({}, this.options.defaultAuthContext), req.authContext);
 
     // Aggregate all the options and test equality with the security context
-    for (var key in secCon) {
+    for (const key in secCon) {
       if (secCon.hasOwnProperty(key)) {
         test = test && __.implies(options[key], secCon[key]);
       }
@@ -214,24 +244,37 @@ class ReqUtils {
     return test;
   }
 
-  handleCustomErrors(err, errorCodes, errorMessages) {
-    let msg;
-    let code = 5000001;
-
-    let codes = __.merge(Object.assign({}, this.options.customErrorCodes), errorCodes || {});
-    let messages = __.merge(Object.assign({}, this.options.customErrorMessages), errorMessages || {});
-
-    if (err.name) {
-      if (codes.hasOwnProperty(err.name)) {
-        code = codes[err.name];
-      }
+  getResponseMessage(code, customMessages) {
+    customMessages = customMessages || this.options.customResponseMessages;
+    if (customMessages.hasOwnProperty(code)) {
+      return customMessages[code];
     }
+    return null;
+  }
 
-    this.setError(code);
-    if (messages.hasOwnProperty(code)) {
-      msg = messages[code];
-    } else {
-      msg = `An unexpected error has occured -- ${err.name}`;
+  handleCustomErrors(err, customCodes, customMessages) {
+    let msg = null;
+    let code = 500001;
+
+    if (err) {
+      const codes = __.merge(Object.assign({}, this.options.customErrorResponseCodes), customCodes || {});
+      const messages = __.merge(Object.assign({}, this.options.customResponseMessages), customMessages || {});
+
+      if (err.name) {
+        if (codes.hasOwnProperty(err.name)) {
+          code = codes[err.name];
+        }
+      } else {
+        err.name = 'No details';
+      }
+
+      this.setError(code);
+      const custMsg = this.getResponseMessage(code, messages);
+      if (custMsg) {
+        msg = custMsg.summary;
+      } else {
+        msg = `An unexpected error has occured -- ${err.name}`;
+      }
     }
 
     return { msg: msg, code: code };
@@ -260,6 +303,7 @@ class ReqUtils {
     // Check if this has already been handled
     if (!this.hasResponse(req)) {
       // AuthContext Check
+      params.security = __.merge(Object.assign({}), params.security);
       if (!this.checkAuthContext(params.security, req)) {
         // Unauthorized user
         this.setError(403000, req);
@@ -272,7 +316,7 @@ class ReqUtils {
       params.secure = params.secure || false;
       if (!__.implies(params.secure, req.secure)) {
         // Unauthorized protocol
-        this.setError(403003, req);
+        this.setError(403001, req);
         err = 'This endpoint is only available via HTTPS. Alter the protocol and try again.';
         next(err);
         return err;
@@ -287,7 +331,7 @@ class ReqUtils {
       const reqParams = this.hasRequiredParams(sepParams.required);
       if (reqParams.length > 0) {
         // We have missing parameters, report the error
-        this.setError(400003, req);
+        this.setError(400001, req);
         // Return an error below
         err = `Required parameters [${reqParams}] are missing from this request.`;
         next(err);
@@ -310,7 +354,7 @@ class ReqUtils {
       const invalidParams = this.validateParams(req.handler);
       if (invalidParams.length > 0) {
         // We have invalid paramaters, report the error
-        this.setError(400004, req);
+        this.setError(400002, req);
         // Return an error below
         err = 'The parameter(s) ';
         let cnt = 0;
@@ -330,7 +374,6 @@ class ReqUtils {
       try {
         closure(req, res, next);
       } catch (innerErr) {
-        // TODO: Need to log stacktraces here
         this.setError(500001, req);
         next(innerErr);
       }
@@ -342,7 +385,7 @@ class ReqUtils {
   }
 
   handleRequestAsync(params, closure, next, res, req) {
-    return new Promise((reject, resolve) => {
+    return new Promise((resolve, reject) => {
       const ret = this.handleRequest(params, closure, next, res, req);
       if (__.hasValue(ret)) {
         reject(ret);
