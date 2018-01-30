@@ -271,7 +271,7 @@ class ReqUtils {
       this.setError(code);
       const custMsg = this.getResponseMessage(code, messages);
       if (custMsg) {
-        msg = custMsg.summary;
+        msg = custMsg.summary || custMsg;
       } else {
         msg = `An unexpected error has occured -- ${err.name}`;
       }
