@@ -63,14 +63,14 @@ function handler(req, res, next) {
 # [API Reference](#api)
 <a name="api"></a>
 
-## new ReqUtils(req [, options]) ⇒ instanceof ReqUtils
+## new ReqUtils(req [, options]) &#x27fe; instanceof ReqUtils
 Create an instance of ReqUtils with the `req` HTTP Request object provided. Additional configuration parameters may be passed in the `options`,
 
 The `options` is a object why may contain any, all, or none of the following:
 
 | Param | Type | Default | Description |
 | ----- | ---- | ------- | ----------- |
-| checkPermissions | Function(HTTPRequest) ⇒ bool | A function to perform additional permission check which returns a boolean if the check passes |
+| checkPermissions | Function(HTTPRequest) &#x27fe; bool | A function to perform additional permission check which returns a boolean if the check passes |
 | customErrorResponseCodes | [CustomCodes](#types-custom-codes)  | A `CustomCodes` object to be used with handleCustomErrors, which checks an error message for the message and sets the appropriate code |
 | customResponseMessages | [CustomMessages](#types-custom-messages) | A `CustomMessages` object which defines the error message details and status codes for various error codes |
 | defaultAuthContext | [AuthContext](#types-auth-context) | A `AuthContext` object which defines the default AuthContext state |
@@ -113,7 +113,7 @@ The `options` is a object why may contain any, all, or none of the following:
 
 ## Request Handling
 
-### .handleRequest(params, closure, next, res[, req]) ⇒ void / Error
+### .handleRequest(params, closure, next, res[, req]) &#x27fe; void / Error
 Using the `params` provides, performs the following, so long as the `req` has not already been processed.
 1. Checks the AuthContext of the request against `params.security`. Sets 403000 error on failure.
 2. Checks the Security requirement (`params.secure`) of the request. (Was this request made over HTTPS when secure == true?). Sets 403001 error on failure.
@@ -155,7 +155,7 @@ The `closure` is a typical request handler function with a function signature as
   , next, res);
 ```
 
-### .handleRequestAsync(...) ⇒ Promise
+### .handleRequestAsync(...) &#x27fe; Promise
 Asynchronous version of `.handleRequest`.  
 
 ```js
@@ -170,10 +170,10 @@ Asynchronous version of `.handleRequest`.
 
 ## Error Handling
 
-### .getResponseMessage(code, customMessages) ⇒ [ResponseMessage](#types-reponse-message) / null
+### .getResponseMessage(code, customMessages) &#x27fe; [ResponseMessage](#types-reponse-message) / null
 Checks the `code` for a match in the merged `ReqUtils.customResponseMessages`. If a match is found, then the corresponding response message is returned.
 
-### .handleCustomErrors(err, customCodes, customMessages) ⇒ object
+### .handleCustomErrors(err, customCodes, customMessages) &#x27fe; object
 Checks `err.name` for a match in the merged `ReqUtils.customErrorResponseCodes` and `customCodes`. If a match is found, then the found code is looked up in the merged `ReqUtils.customResponseMessages` and `customMessages` for a summary message.  If no code is found, then the code is set to 500001. If no summary is found, then the summary message is set to 'An unexpected error has occurred -- {err.name}'. The code and error are then returned in a objects. If `err` is null, then the object returned contains a `null` message. If `err.name` is null, then it defaults to 'No details'.
 
 ```js
@@ -185,7 +185,7 @@ Checks `err.name` for a match in the merged `ReqUtils.customErrorResponseCodes` 
 ### .setSkipAuth(value [,req])
 Set the `req.skipAuth` flag with the `value` provided. Any non-boolean `value` will be coerced to a boolean.
 
-### .skipAuth([req]) ⇒ boolean
+### .skipAuth([req]) &#x27fe; boolean
 Return the value of the `req.skipAuth` flag.
 
 ### .setTimedout([req])
@@ -197,7 +197,7 @@ Set the `req.hasError` flag to true and sets the `req.respCode` to `code` provid
 ### .setData(data [, req])
 Set the `req.hasData` flag to true and sets `req.data` to `data` provided, so that it can be processed downstream.
 
-### .hasResponse([req]) ⇒ boolean
+### .hasResponse([req]) &#x27fe; boolean
 Test the `req` to see if the `hasData`, `hasError` or `timedout` flags have been set
 
 ### .setAuthContext(authContext [, req])
@@ -206,12 +206,12 @@ Set the `req.authContext` flags with fills from the `defaultAuthContext`.
 ### .updateAuthContext(authContext [,req])
 Merge `authContext` values into `req.authContext` values, overwriting any values currently set in `req.authContext`.
 
-### .checkAuthContext(options [,req]) ⇒ boolean
+### .checkAuthContext(options [,req]) &#x27fe; boolean
 Compares the `options` values against the `req.authContext` ensuring that any option set true is also true in the
 `req.authContext`.  Any value set false in the options is ignored. Returns false if any option is true, but the
 authContext is false.
 
-### .checkPermissions([req]) ⇒ boolean
+### .checkPermissions([req]) &#x27fe; boolean
 Runs the configured `checkPermissions` function configured as a part of the initialization options for ReqUtils.
 
 ## Parameter Binding
@@ -220,7 +220,7 @@ Runs the configured `checkPermissions` function configured as a part of the init
 Sets the `req.handler` from the `params` provided, then gathers, parses, and converts these values from the request and
 places the values into both `req.handler.[key].value` `req.locals.[key]`.
 
-### .compileRequiredParams(params) ⇒ object
+### .compileRequiredParams(params) &#x27fe; object
 Analyzes the `params` configured and creates a dictionary of required and optional parameters. This is used to validate
 the request in the `handleRequest` method.
 
@@ -228,7 +228,7 @@ the request in the `handleRequest` method.
   // { required: reqParams, optional: optParams }
 ```
 
-### .hasRequiredParams(requiredParams) ⇒ array
+### .hasRequiredParams(requiredParams) &#x27fe; array
 Analyzes the key values in the `requiredParams` and checks that each of them have a value. Each key name with a missing
 value is returned in an array. With an empty array being returned if there are no missing values. `requiredParams` is
 the `.required` key from the object returned from `.compileRequiredParams`
