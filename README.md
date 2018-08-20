@@ -113,7 +113,7 @@ The `options` is a object why may contain any, all, or none of the following:
 
 ## Request Handling
 
-### .handleRequest(params, closure, next, res[, req]) &#x27fe; void / Error
+### .handleRequest(params, handler, next, res[, req]) &#x27fe; void / Error
 Using the `params` provides, performs the following, so long as the `req` has not already been processed.
 1. Checks the AuthContext of the request against `params.security`. Sets 403000 error on failure.
 2. Checks the Security requirement (`params.secure`) of the request. (Was this request made over HTTPS when secure == true?). Sets 403001 error on failure.
@@ -122,14 +122,13 @@ Using the `params` provides, performs the following, so long as the `req` has no
 5. Handle default values for options request parameters
 6. Validates that all request parameters are over the expected data types. Sets 400002 on failure.
 7. Runs `checkPermission`. Sets 403000 error on failure.
-8. If none of the above generates an error, then runs the `closure` function provided. If the closure throws an Exception, then sets a 500001 error.
+8. If none of the above generates an error, then runs the `handler` function provided. If the handler throws an Exception, then sets a 500001 error.
 
-`next` is the asynchronous closure that used to process requests used by [ExpressJS](), [SailsJS](), and other similar
-frameworks. `res` is the HTTP Response object for the request. `req` is the HTTPRequest object.
+`next` is the asynchronous handler used by [ExpressJS](), [SailsJS](), and other similar frameworks to continue execution or return errors. `res` is the HTTP Response object for the request. `req` is the HTTPRequest object.
 
 `params` are outlined in the [Request Handler Parameters](#type-handler-params) below.
 
-The `closure` is a typical request handler function with a function signature as follow:
+The `handler` is a function with a function signature as follow:
 ```js
   (req, res, next) => {
     // Do something
