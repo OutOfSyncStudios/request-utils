@@ -1,13 +1,13 @@
 # request-utils
 
-[![NPM](https://nodei.co/npm/@mediaxpost/request-utils.png?downloads=true)](https://nodei.co/npm/@mediaxpost/request-utils/)
+[![NPM](https://nodei.co/npm/@outofsync/request-utils.png?downloads=true)](https://nodei.co/npm/@outofsync/request-utils/)
 
-[![Actual version published on npm](http://img.shields.io/npm/v/@mediaxpost/request-utils.svg)](https://www.npmjs.org/package/@mediaxpost/request-utils)
-[![Travis build status](https://travis-ci.org/MediaXPost/request-utils.svg)](https://www.npmjs.org/package/@mediaxpost/request-utils)
-[![Total npm module downloads](http://img.shields.io/npm/dt/@mediaxpost/request-utils.svg)](https://www.npmjs.org/package/@mediaxpost/request-utils)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/5252e67803f44c0ca75f05bfab449a6d)](https://www.codacy.com/app/chronosis/request-utils?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=MediaXPost/request-utils&amp;utm_campaign=Badge_Grade)
-[![Codacy Coverage Badge](https://api.codacy.com/project/badge/Coverage/5252e67803f44c0ca75f05bfab449a6d)](https://www.codacy.com/app/chronosis/request-utils?utm_source=github.com&utm_medium=referral&utm_content=MediaXPost/request-utils&utm_campaign=Badge_Coverage)
-[![Dependencies badge](https://david-dm.org/MediaXPost/request-utils/status.svg)](https://david-dm.org/MediaXPost/request-utils?view=list)
+[![Actual version published on npm](http://img.shields.io/npm/v/@outofsync/request-utils.svg)](https://www.npmjs.org/package/@outofsync/request-utils)
+[![Travis build status](https://travis-ci.org/OutOfSyncStudios/request-utils.svg)](https://www.npmjs.org/package/@outofsync/request-utils)
+[![Total npm module downloads](http://img.shields.io/npm/dt/@outofsync/request-utils.svg)](https://www.npmjs.org/package/@outofsync/request-utils)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/5252e67803f44c0ca75f05bfab449a6d)](https://www.codacy.com/app/OutOfSyncStudios/request-utils?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=OutOfSyncStudios/request-utils&amp;utm_campaign=Badge_Grade)
+[![Codacy Coverage Badge](https://api.codacy.com/project/badge/Coverage/5252e67803f44c0ca75f05bfab449a6d)](https://www.codacy.com/app/OutOfSyncStudios/request-utils?utm_source=github.com&utm_medium=referral&utm_content=OutOfSyncStudios/request-utils&utm_campaign=Badge_Coverage)
+[![Dependencies badge](https://david-dm.org/OutOfSyncStudios/request-utils/status.svg)](https://david-dm.org/OutOfSyncStudios/request-utils?view=list)
 
 
 `request-utils` is library designed to simplify the processing of HTTP Request handling and parameters parsing by abstracting commonly reused processing patterns.
@@ -18,14 +18,14 @@ It can be used with any framework that creates and uses HTTPRequest objects.
 <a name="installation"></a>
 
 ```shell
-npm install @mediaxpost/request-utils
+npm install @outofsync/request-utils
 ```
 
 # [Usage](#usage)
 <a name="usage"></a>
 
 ```js
-const ReqUtils = require('@mediaxpost/request-utils');
+const ReqUtils = require('@outofsync/request-utils');
 
 // Example Express.js handler
 function handler(req, res, next) {
@@ -285,7 +285,7 @@ dataVal1: {
 | options | object | Additional validator.js options for the data type. See below. | N |
 
 ### Data Types and Validation options
-The following data types are supported for parsing: `int`, `float`, `bool`, `email`, `currency`, `uuid`, `url`, `fqdn`, `apikey`, `string`, `any`. For more information, please see the [validation-helper README](https://www.npmjs.com/package/@mediaxpost/validation-helper#api)
+The following data types are supported for parsing: `int`, `float`, `bool`, `email`, `currency`, `uuid`, `url`, `fqdn`, `apikey`, `string`, `any`. For more information, please see the [validation-helper README](https://www.npmjs.com/package/@outofsync/validation-helper#api)
 
 ### Sources
 The following request sources are available:
@@ -382,4 +382,5 @@ A collection of [ResponseMessage](#types-reponse-message) objects, with a matchi
 # [License](#license)
 <a name="license"></a>
 
-Copyright (c) 2018 Jay Reardon -- Licensed under the MIT license.
+Copyright (c) 2018, 2019 Jay Reardon
+Copyright (c) 2019 Out of Sync Studios LLC  -- Licensed under the MIT license.

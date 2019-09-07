@@ -1,7 +1,67 @@
 // reqUtils.js
 
-const __ = require('@mediaxpost/lodashext');
-const validator = require('@mediaxpost/validation-helper');
+const __ = require('@outofsync/lodash-ex');
+const validator = require('@outofsync/validation-helper');
+const Localize = require('@outofsync/localize');
+
+const defaultDictionary = {
+  ResponseCodes: {
+    200000: {
+      Summary: 'OK',
+      Message: ''
+    },
+    400000: {
+      Summary: 'Bad Request',
+      Message: 'The request is malformed.'
+    },
+    400001: {
+      Summary: 'Missing Parameters',
+      Message: 'The request is missing required parameters.'
+    },
+    400002: {
+      Summary: 'Non-Existent Record',
+      Message: 'The record requested does not exist.'
+    },
+    401000: {
+      Summary: 'Unauthorized',
+      Message: 'This request is not authorized.'
+    },
+    403000: {
+      Summary: 'Forbidden',
+      Message: 'The credentials provided are not authorized for this request.'
+    },
+    403001: {
+      Summary: 'Forbidden',
+      Message: 'Secure endpoints can only be accessed via HTTPS.'
+    },
+    408000: {
+      Summary: 'Timed Out',
+      Message: 'The request timed out.'
+    },
+    429000: {
+      Summary: 'Rate Limit',
+      Message: 'Rate limit has been exceeded'
+    },
+    500000: {
+      Summary: 'Could Not Connect',
+      Message: 'The server connection timed out'
+    },
+    500001: {
+      Summary: 'General Server Error',
+      Message: 'A fatal error has occurred on the server.'
+    }
+  },
+  __RequestUtils: {
+    NoDetails: 'No Details',
+    UnexpectedPlusError: 'An unexpected error has occurred -- $1',
+    UnauthorizedAPIAccess: 'The API Provided is not authorized to access this resource.',
+    UnauthorizedProtocolNoHTTP: 'The endpoint is only available via HTTPS. Alter the protocol and try again.',
+    BadRequestMissingParams: 'Required parameters [$1] are missing from this request.',
+    UnauthorizedNoAccess: 'You are not authorized to access this resource.',
+    Parameters: 'The parameter(s) ',
+    KeyType: '\'$1\' should be type \'$2\'',
+  }
+};
 
 /**
  * A utility class to process common HTTP request parameters and handling. This class exists to move repeated
@@ -16,31 +76,19 @@ class ReqUtils {
     this.options = {
       checkPermissions: ((_req) => { return true; }),
       customErrorResponseCodes: {},
-      customResponseMessages: {
-        [200000]: { summary: 'OK', message: '', status: 200 },
-        [400000]: { summary: 'Bad Request', message: 'The request is malformed.', status: 400 },
-        [400001]: {
-          summary: 'Missing Parameters',
-          message: 'The request is missing required parameters.',
-          status: 400
-        },
-        [400002]: { summary: 'Non-Existent Record', message: 'The record requested does not exist.', status: 400 },
-        [401000]: { summary: 'Unauthorized', message: 'This request is not authorized.', status: 401 },
-        [403000]: {
-          summary: 'Forbidden',
-          message: 'The credentials provided are not authorized for this request',
-          status: 403
-        },
-        [403001]: { summary: 'Forbidden', message: 'Secure endpoints can only be accessed via HTTPS.', status: 403 },
-        [408000]: { summary: 'Timed Out', message: 'The request timed out.', status: 408 },
-        [429000]: { summary: 'Rate Limit', message: 'Rate limit has been exceeded', status: 429 },
-        [500000]: { summary: 'Could Not Connect', message: 'The server connection timed out', status: 500 },
-        [500001]: { summary: 'General Server Error', message: 'A fatal error has occurred on the server.', status: 500 }
-      },
-      defaultAuthContext: { super: false, signed: false, server: false, client: false }
+      customResponseMessagesKeys: {},
+      defaultAuthContext: { super: false, signed: false, server: false, client: false },
+      defaultLang: 'en'
     };
     this.req = req;
     __.merge(this.options, options || {});
+
+    if (!this.options.i18n || !(this.options.i18n instanceof Localize)) {
+      this.options.i18n = new Localize();
+      this.options.i18n.loadDictionary('en', defaultDictionary);
+    } else {
+      this.options.i18n.dictionaries[this.options.defaultLang] = __.merge(__.assign({}, defaultDictionary), this.options.i18n.dictionaries[this.options.defaultLang]);
+    }
   }
 
   setSkipAuth(value, req) {
@@ -244,40 +292,63 @@ class ReqUtils {
     return test;
   }
 
-  getResponseMessage(code, customMessages) {
-    customMessages = customMessages || this.options.customResponseMessages;
-    if (customMessages.hasOwnProperty(code)) {
-      return customMessages[code];
+  getResponseMessage(code, lang, customMessagesKeys) {
+    lang = lang || this.options.defaultLang;
+    const baseKey = `ResponseCodes.${code}`;
+    const message = {
+      summary: this.options.i18n.tr(`${baseKey}.Summary`, lang),
+      message: this.options.i18n.tr(`${baseKey}.Message`, lang)
+    };
+
+    // If customMessagesKeys were provided use those instead to lookup summary and message
+    if (customMessagesKeys && customMessagesKeys.hasOwnProperty(code)) {
+      message.summary = this.options.i18n.tr(customMessagesKeys[code].summary);
+      message.message = this.options.i18n.tr(customMessagesKeys[code].message);
     }
-    return null;
+
+    return message;
   }
 
-  handleCustomErrors(err, customCodes, customMessages) {
+  handleCustomErrors(err, customCodes, customMessagesKeys) {
     let msg = null;
     let code = 500001;
+    const retVal = {};
 
     if (err) {
-      const codes = __.merge(Object.assign({}, this.options.customErrorResponseCodes), customCodes || {});
-      const messages = __.merge(Object.assign({}, this.options.customResponseMessages), customMessages || {});
+      const codes = __.merge(__.assign({}, this.options.customErrorResponseCodes), customCodes);
+      const messages = __.merge(__.assign({}, this.options.customResponseMessagesKeys), customMessagesKeys);
+      const name = err.name || err;
 
-      if (err.name) {
-        if (codes.hasOwnProperty(err.name)) {
-          code = codes[err.name];
-        }
+      if (err.respCode) {
+        code = err.respCode;
       } else {
-        err.name = 'No details';
+        // Match error.name to specific response code
+        const name = err.name || err;
+        if (name) {
+          if (codes.hasOwnProperty(name)) {
+            code = codes[name];
+          }
+        } else {
+          name = this.options.i18n.tr('__RequestUtils.NoDetails');
+        }
       }
 
       this.setError(code);
-      const custMsg = this.getResponseMessage(code, messages);
-      if (custMsg) {
-        msg = custMsg.summary || custMsg;
+      const message = err.message || name || err;
+      retVal.details = message;
+      const custMsg = this.getResponseMessage(code, null, messages);
+      if (custMsg && custMsg.summary) {
+        msg = custMsg.summary;
       } else {
-        msg = `An unexpected error has occured -- ${err.name}`;
+        msg = this.options.i18n.tr('__RequestUtils.UnexpectedPlusError', null, message);
       }
     }
-
-    return { msg: msg, code: code };
+    retVal.msg = msg;
+    retVal.code = code;
+    if (err instanceof Error || (typeof err === 'object' && err.hasOwnProperty('stack'))) {
+      retVal.stack = err.stack;
+    }
+    return retVal;
   }
 
   // Expects an object containing paramater and security information
@@ -317,7 +388,7 @@ class ReqUtils {
       if (!__.implies(params.secure, req.secure)) {
         // Unauthorized protocol
         this.setError(403001, req);
-        err = 'This endpoint is only available via HTTPS. Alter the protocol and try again.';
+        err = this.options.i18n.tr('__RequestUtils.UnauthorizedProtocolNoHTTP');
         next(err);
         return err;
       }
@@ -333,7 +404,7 @@ class ReqUtils {
         // We have missing parameters, report the error
         this.setError(400001, req);
         // Return an error below
-        err = `Required parameters [${reqParams}] are missing from this request.`;
+        err = this.options.i18n.tr('__RequestUtils.BadRequestMissingParams', null, reqParams);
         next(err);
         return err;
       }
@@ -342,7 +413,7 @@ class ReqUtils {
       if (!this.checkPermissions(req)) {
         // Unauthorized user
         this.setError(403000, req);
-        err = 'You are not authorized to access this resource.';
+        err = this.options.i18n.tr('__RequestUtils.UnauthorizedNoAccess');
         next(err);
         return err;
       }
@@ -356,13 +427,13 @@ class ReqUtils {
         // We have invalid paramaters, report the error
         this.setError(400002, req);
         // Return an error below
-        err = 'The parameter(s) ';
+        err = this.options.i18n.tr('__RequestUtils.Parameters');
         let cnt = 0;
         for (const value of invalidParams) {
           if (cnt > 0) {
             err += ', ';
           }
-          err += `'${value.key}' should be type '${value.type}'`;
+          err += this.options.i18n.tr('__RequestUtils.KeyType', null, value.key, value.type);
           cnt += 1;
         }
         err += '.';

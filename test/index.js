@@ -1,7 +1,7 @@
 // test/index.js
 
 // Dependancies
-const __ = require('@mediaxpost/lodashext');
+const __ = require('@outofsync/lodash-ex');
 const chai = require('chai');
 const expect = chai.expect;
 const ReqUtils = require('../');
@@ -43,14 +43,21 @@ const reqParams = {
   missingRequiredVar: { type: 'string', required: true, source: ['body'] }
 };
 
+const basicDictionary = {
+  TestSummary: 'Test1',
+  TestMessage: 'Test message 1',
+  OK: 'OK',
+  _Blank: ''
+};
+
 const reqUtilOptions = {
   customErrorResponseCodes: {
     ['TestError']: 12345,
     ['OtherTestError']: 98765,
   },
-  customResponseMessages: {
-    [12345]: { summary: 'Test1', message: 'Test message 1', status: 200 },
-    [200000]: { summary: 'OK', message: '', status: 200 }
+  customResponseMessagesKeys: {
+    [12345]: { summary: 'TestSummary', message: 'TestMessage' },
+    [200000]: { summary: 'OK', message: '_Blank' }
   }
 };
 
@@ -60,12 +67,22 @@ describe('Request Utilities', () => {
   let sepParams;
   before((done) => {
     reqUtils = new ReqUtils(req, reqUtilOptions);
+    reqUtils.options.i18n.loadDictionary('en', basicDictionary);
     done();
   });
 
   it('constructor', () => {
     expect(reqUtils).to.be.instanceof(ReqUtils);
   });
+
+  it('setTimedout', () => {
+    reqUtils.setTimedout();
+    expect(req.timedout).to.equal(true);
+    expect(req.respCode).to.equal(429000);
+    req.timedout = false;
+    req.respCode = null;
+  });
+
   it('setError', () => {
     reqUtils.setError(12345);
     expect(req.hasError).to.equal(true);
@@ -73,21 +90,25 @@ describe('Request Utilities', () => {
     req.hasError = false;
     req.respCode = null;
   });
+
   it('setData', () => {
     reqUtils.setData({ message: 'OK' });
     expect(req.hasData).to.equal(true);
     expect(req.data.message).to.equal('OK');
     req.data = null;
   });
+
   it('hasResponse', () => {
     expect(reqUtils.hasResponse()).to.equal(true);
   });
+
   it('skipAuth', () => {
     reqUtils.setSkipAuth(1);
     expect(reqUtils.skipAuth()).to.equal(true);
     reqUtils.setSkipAuth('');
     expect(reqUtils.skipAuth()).to.equal(false);
   });
+
   it('setAuthContext', () => {
     reqUtils.setAuthContext({ super: false, signed: false, server: false, client: false });
     expect(req.authContext).to.exist;
@@ -96,17 +117,20 @@ describe('Request Utilities', () => {
     expect(req.authContext.server).to.equal(false);
     expect(req.authContext.client).to.equal(false);
   });
+
   it('updateAuthContext', () => {
     reqUtils.updateAuthContext({ super: true });
     expect(req.authContext).to.exist;
     expect(req.authContext.super).to.equal(true);
   });
+
   it('updateAuthContext with empty context', () => {
     req.authContext = null;
     reqUtils.updateAuthContext({ });
     expect(req.authContext).to.exist;
     expect(req.authContext.super).to.equal(false);
   });
+
   it('checkAuthContext', () => {
     reqUtils.setAuthContext({ super: false, signed: false, server: false, client: false });
     expect(reqUtils.checkAuthContext({ super: true })).to.equal(false);
@@ -134,56 +158,69 @@ describe('Request Utilities', () => {
     expect(reqUtils.checkAuthContext({ server: true })).to.equal(false);
     expect(reqUtils.checkAuthContext({ client: true })).to.equal(false);
   });
+
   it('checkPermissions', () => {
     expect(reqUtils.checkPermissions()).to.equal(true);
     req.locals = {};
   });
+
   it('retrieveParams', () => {
     reqUtils.retrieveParams(reqParams);
     // This should move all the values to the req.locals
     expect(__.hasValue(req.locals)).to.equal(true);
     expect(__.hasValue(req.handler)).to.equal(true);
   });
+
   it('checking value retrieval from params', () => {
     expect(__.hasValue(req.locals.paramVar)).to.equal(true);
     expect(req.locals.paramVar).to.equal(1234);
   });
+
   it('checking value retrieval from body', () => {
     expect(__.hasValue(req.locals.bodyVar)).to.equal(true);
     expect(req.locals.bodyVar).to.equal('1234');
   });
+
   it('checking value retrieval from body \'params\' JSON string', () => {
     expect(__.hasValue(req.locals.jsonData)).to.equal(true);
     expect(req.locals.jsonData).to.equal('this is a string');
   });
+
   it('checking value retrieval from header', () => {
     expect(__.hasValue(req.locals.headerVar)).to.equal(true);
     expect(req.locals.headerVar).to.equal('1234');
   });
+
   it('checking value retrieval from query', () => {
     expect(__.hasValue(req.locals.queryVar)).to.equal(true);
     expect(req.locals.queryVar).to.equal('1234');
   });
+
   it('checking value retrieval priority where variable can come from multiple sources', () => {
     expect(__.hasValue(req.locals.multiVar)).to.equal(true);
     expect(req.locals.multiVar).to.equal('abcd');
   });
+
   it('checking that value that is not in the correct source is not retrieved', () => {
     expect(__.hasValue(req.locals.wrongSrcVar)).to.not.equal(true);
   });
+
   it('checking that missing value is not retrieved', () => {
     expect(__.hasValue(req.locals.missingRequiredVar)).to.not.equal(true);
   });
+
   it('compileRequiredParams', () => {
     sepParams = reqUtils.compileRequiredParams(req.handler);
     expect(__.hasValue(sepParams)).to.equal(true);
     expect(__.hasValue(sepParams.required)).to.equal(true);
     expect(__.hasValue(sepParams.optional)).to.equal(true);
   });
+
   it('hasRequiredParams', () => {
     const required = reqUtils.hasRequiredParams(sepParams.required);
     expect(required.length === 1); // There should be 1 missing parameter
   });
+
   it('handleDefaults', () => {
     reqUtils.handleDefaults(sepParams.optional);
     expect(__.hasValue(req.locals.resetValue)).to.equal(true);
@@ -193,6 +230,7 @@ describe('Request Utilities', () => {
     expect(__.hasValue(req.locals.badDefaultValidation)).to.equal(true);
     expect(req.locals.badDefaultValidation).to.equal('default');
   });
+
   it('validateParams', () => {
     const invalidParams = reqUtils.validateParams(req.handler);
     expect(invalidParams.length).is.above(0);
@@ -201,26 +239,38 @@ describe('Request Utilities', () => {
       return elem.key === 'badDefaultValidation';
     })).to.exist; // This should return true as badDefaultValidation should exist
   });
+
   it('handleCustomError with null error', () => {
     const errorMessage = reqUtils.handleCustomErrors();
     expect(errorMessage.code).to.equal(500001);
     expect(errorMessage.msg).to.equal(null);
   });
+
   it('handleCustomError with empty error', () => {
     const errorMessage = reqUtils.handleCustomErrors({});
     expect(errorMessage.code).to.equal(500001);
     expect(errorMessage.msg).to.have.string('General');
   });
+
   it('handleCustomError with matching error and code', () => {
     const errorMessage = reqUtils.handleCustomErrors({ name: 'TestError' });
     expect(errorMessage.code).to.equal(12345);
     expect(errorMessage.msg).to.have.string('Test1');
   });
+
   it('handleCustomError with matching error and but no code', () => {
     const errorMessage = reqUtils.handleCustomErrors({ name: 'OtherTestError' });
     expect(errorMessage.code).to.equal(98765);
     expect(errorMessage.msg).to.have.string('Other');
   });
+
+  it('handleCustomError with Error class', () => {
+    const errorMessage = reqUtils.handleCustomErrors(new Error('Error object'));
+    expect(errorMessage.code).to.equal(500001);
+    expect(errorMessage.msg).to.have.string('Error');
+  });
+
+
   it('handleRequest', (done) => {
     req.hasData = false;
     req.hasError = false;
@@ -239,6 +289,7 @@ describe('Request Utilities', () => {
       () => { }
     );
   });
+
   it('handleRequest with thrown error', (done) => {
     req.hasData = false;
     req.hasError = false;
@@ -433,4 +484,27 @@ describe('Request Utilities', () => {
         done();
       });
   });
+
+  // it('handleRequest with multiple invalid parameters', (done) => {
+  //   reqUtils.options.checkPermissions = ((_req) => { return true; });
+  //   req.hasData = false;
+  //   req.hasError = false;
+  //   req.respCode = null;
+  //   req.locals = null;
+  //   req.authContext.super = true;
+  //   reqParams.missingRequiredVar2 = { type: 'string', required: true, source: ['body'] }
+  //   reqUtils.handleRequest(
+  //     {
+  //       params: __.omit(reqParams, ['badDefaultValidation', 'missingRequiredVar']),
+  //       security: { super: true }
+  //     },
+  //     () => { },
+  //     (err) => {
+  //       if (err) {
+  //         expect(req.respCode).to.equal(400001);
+  //       }
+  //       done();
+  //     }
+  //   );
+  // });
 });
