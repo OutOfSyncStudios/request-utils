@@ -30,16 +30,16 @@
     "@outofsync/localize": "^1.1.2",
     "@outofsync/lodash-ex": "^1.3.2",
     "@outofsync/validation-helper": "^1.1.1",
-    "eslint": "^6.3.0"
+    "eslint": "^6.5.1"
   },
   "devDependencies": {
     "chai": "^4.2.0",
     "codacy-coverage": "^3.4.0",
     "gulp": "^4.0.2",
     "gulp-eslint": "^6.0.0",
-    "gulp-mocha": "^7.0.1",
-    "gulp-prettier": "^2.1.0",
-    "mocha": "^6.2.0",
+    "gulp-mocha": "^7.0.2",
+    "gulp-prettier": "^2.2.0",
+    "mocha": "^6.2.2",
     "nyc": "^14.1.1",
     "prettier": "^1.18.2"
   }

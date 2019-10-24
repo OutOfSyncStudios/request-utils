@@ -374,7 +374,7 @@ class ReqUtils {
       if (!this.checkAuthContext(params.security, req)) {
         // Unauthorized user
         this.setError(403000, req);
-        err = 'The API Provided is not authorized to access this resource';
+        err = this.options.i18n.tr('__RequestUtils.UnauthorizedAPIAccess');
         next(err);
         return err;
       }
