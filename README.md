@@ -5,8 +5,8 @@
 [![Actual version published on npm](http://img.shields.io/npm/v/@outofsync/request-utils.svg)](https://www.npmjs.org/package/@outofsync/request-utils)
 [![Travis build status](https://travis-ci.org/OutOfSyncStudios/request-utils.svg)](https://www.npmjs.org/package/@outofsync/request-utils)
 [![Total npm module downloads](http://img.shields.io/npm/dt/@outofsync/request-utils.svg)](https://www.npmjs.org/package/@outofsync/request-utils)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/5252e67803f44c0ca75f05bfab449a6d)](https://www.codacy.com/app/OutOfSyncStudios/request-utils?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=OutOfSyncStudios/request-utils&amp;utm_campaign=Badge_Grade)
-[![Codacy Coverage Badge](https://api.codacy.com/project/badge/Coverage/5252e67803f44c0ca75f05bfab449a6d)](https://www.codacy.com/app/OutOfSyncStudios/request-utils?utm_source=github.com&utm_medium=referral&utm_content=OutOfSyncStudios/request-utils&utm_campaign=Badge_Coverage)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/5252e67803f44c0ca75f05bfab449a6d)](https://www.codacy.com/manual/OutOfSyncStudios/request-utils?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=OutOfSyncStudios/request-utils&amp;utm_campaign=Badge_Grade)
+[![Codacy Coverage Badge](https://api.codacy.com/project/badge/Coverage/5252e67803f44c0ca75f05bfab449a6d)](https://www.codacy.com/manual/OutOfSyncStudios/request-utils?utm_source=github.com&utm_medium=referral&utm_content=OutOfSyncStudios/request-utils&utm_campaign=Badge_Coverage)
 [![Dependencies badge](https://david-dm.org/OutOfSyncStudios/request-utils/status.svg)](https://david-dm.org/OutOfSyncStudios/request-utils?view=list)
 
 
