@@ -1,6 +1,6 @@
 {
   "name": "@outofsync/request-utils",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A library to process HTTP Request parameters and processes",
   "main": "index.js",
   "scripts": {
@@ -14,6 +14,9 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/OutofSyncStudios/request-utils.git"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "keywords": [
     "lodash",
