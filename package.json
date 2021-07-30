@@ -32,7 +32,7 @@
   "homepage": "https://github.com/OutofSyncStudios/request-utils#readme",
   "dependencies": {
     "@outofsync/localize": "^1.1.4",
-    "@outofsync/validation-helper": "^1.2.1",
+    "@outofsync/validation-helper": "^1.3.0",
     "implies": "^1.0.3",
     "lodash.assign": "^4.2.0",
     "lodash.isnil": "^4.0.0",
