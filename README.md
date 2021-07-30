@@ -3,10 +3,10 @@
 [![NPM](https://nodei.co/npm/@outofsync/request-utils.png?downloads=true)](https://nodei.co/npm/@outofsync/request-utils/)
 
 [![Actual version published on npm](http://img.shields.io/npm/v/@outofsync/request-utils.svg)](https://www.npmjs.org/package/@outofsync/request-utils)
-[![Travis build status](https://travis-ci.org/OutOfSyncStudios/request-utils.svg)](https://www.npmjs.org/package/@outofsync/request-utils)
+[![Build and Test Master](https://github.com/OutOfSyncStudios/request-utils/actions/workflows/build-master.yml/badge.svg)](https://github.com/OutOfSyncStudios/request-utils/actions/workflows/build-master.yml)
 [![Total npm module downloads](http://img.shields.io/npm/dt/@outofsync/request-utils.svg)](https://www.npmjs.org/package/@outofsync/request-utils)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/5252e67803f44c0ca75f05bfab449a6d)](https://www.codacy.com/manual/OutOfSyncStudios/request-utils?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=OutOfSyncStudios/request-utils&amp;utm_campaign=Badge_Grade)
-[![Codacy Coverage Badge](https://api.codacy.com/project/badge/Coverage/5252e67803f44c0ca75f05bfab449a6d)](https://www.codacy.com/manual/OutOfSyncStudios/request-utils?utm_source=github.com&utm_medium=referral&utm_content=OutOfSyncStudios/request-utils&utm_campaign=Badge_Coverage)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/062776002e3942a198f19da955bf1ac9)](https://www.codacy.com/gh/OutOfSyncStudios/request-utils/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=OutOfSyncStudios/request-utils&amp;utm_campaign=Badge_Grade)
+[![Codacy Coverage Badge](https://app.codacy.com/project/badge/Coverage/062776002e3942a198f19da955bf1ac9)](https://www.codacy.com/gh/OutOfSyncStudios/request-utils/dashboard?utm_source=github.com&utm_medium=referral&utm_content=OutOfSyncStudios/request-utils&utm_campaign=Badge_Coverage)
 [![Dependencies badge](https://david-dm.org/OutOfSyncStudios/request-utils/status.svg)](https://david-dm.org/OutOfSyncStudios/request-utils?view=list)
 
 
@@ -383,4 +383,4 @@ A collection of [ResponseMessage](#types-reponse-message) objects, with a matchi
 <a name="license"></a>
 
 Copyright (c) 2018, 2019 Jay Reardon
-Copyright (c) 2019 Out of Sync Studios LLC  -- Licensed under the MIT license.
+Copyright (c) 2019-2021 Out of Sync Studios LLC  -- Licensed under the MIT license.
