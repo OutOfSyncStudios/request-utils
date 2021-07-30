@@ -1,67 +1,14 @@
 // reqUtils.js
 
-const __ = require('@outofsync/lodash-ex');
+const { implies } = require('implies');
+const isNil = require('lodash.isnil');
+const assign = require('lodash.assign');
+const merge = require('lodash.merge');
+
 const validator = require('@outofsync/validation-helper');
 const Localize = require('@outofsync/localize');
 
-const defaultDictionary = {
-  ResponseCodes: {
-    200000: {
-      Summary: 'OK',
-      Message: ''
-    },
-    400000: {
-      Summary: 'Bad Request',
-      Message: 'The request is malformed.'
-    },
-    400001: {
-      Summary: 'Missing Parameters',
-      Message: 'The request is missing required parameters.'
-    },
-    400002: {
-      Summary: 'Non-Existent Record',
-      Message: 'The record requested does not exist.'
-    },
-    401000: {
-      Summary: 'Unauthorized',
-      Message: 'This request is not authorized.'
-    },
-    403000: {
-      Summary: 'Forbidden',
-      Message: 'The credentials provided are not authorized for this request.'
-    },
-    403001: {
-      Summary: 'Forbidden',
-      Message: 'Secure endpoints can only be accessed via HTTPS.'
-    },
-    408000: {
-      Summary: 'Timed Out',
-      Message: 'The request timed out.'
-    },
-    429000: {
-      Summary: 'Rate Limit',
-      Message: 'Rate limit has been exceeded'
-    },
-    500000: {
-      Summary: 'Could Not Connect',
-      Message: 'The server connection timed out'
-    },
-    500001: {
-      Summary: 'General Server Error',
-      Message: 'A fatal error has occurred on the server.'
-    }
-  },
-  __RequestUtils: {
-    NoDetails: 'No Details',
-    UnexpectedPlusError: 'An unexpected error has occurred -- $1',
-    UnauthorizedAPIAccess: 'The API Provided is not authorized to access this resource.',
-    UnauthorizedProtocolNoHTTP: 'The endpoint is only available via HTTPS. Alter the protocol and try again.',
-    BadRequestMissingParams: 'Required parameters [$1] are missing from this request.',
-    UnauthorizedNoAccess: 'You are not authorized to access this resource.',
-    Parameters: 'The parameter(s) ',
-    KeyType: '\'$1\' should be type \'$2\'',
-  }
-};
+const defaultDictionary = require('./src/lib/constants');
 
 /**
  * A utility class to process common HTTP request parameters and handling. This class exists to move repeated
@@ -74,6 +21,7 @@ const defaultDictionary = {
 class ReqUtils {
   constructor(req, options) {
     this.options = {
+      // eslint-disable-next-line no-unused-vars
       checkPermissions: ((_req) => { return true; }),
       customErrorResponseCodes: {},
       customResponseMessagesKeys: {},
@@ -81,19 +29,21 @@ class ReqUtils {
       defaultLang: 'en'
     };
     this.req = req;
-    __.merge(this.options, options || {});
+    merge(this.options, options || {});
 
     if (!this.options.i18n || !(this.options.i18n instanceof Localize)) {
       this.options.i18n = new Localize();
       this.options.i18n.loadDictionary('en', defaultDictionary);
     } else {
-      this.options.i18n.dictionaries[this.options.defaultLang] = __.merge(__.assign({}, defaultDictionary), this.options.i18n.dictionaries[this.options.defaultLang]);
+      const defaultDic = assign({}, defaultDictionary);
+      const defaultLang = this.options.defaultLang;
+      this.options.i18n.dictionaries[defaultLang] = merge(defaultDic, this.options.i18n.dictionaries[defaultLang]);
     }
   }
 
   setSkipAuth(value, req) {
     req = req || this.req;
-    req.skipAuth = __.bool(value);
+    req.skipAuth = Boolean(value);
   }
 
   skipAuth(req) {
@@ -127,21 +77,21 @@ class ReqUtils {
   setAuthContext(authContext, req) {
     req = req || this.req;
 
-    if (__.isUnset(req.authContext)) {
+    if (isNil(req.authContext)) {
       req.authContext = this.options.defaultAuthContext;
     }
 
-    req.authContext = __.merge(Object.assign({}, this.options.defaultAuthContext), authContext);
+    req.authContext = merge(Object.assign({}, this.options.defaultAuthContext), authContext);
   }
 
   updateAuthContext(authContext, req) {
     req = req || this.req;
 
-    if (__.isUnset(req.authContext)) {
+    if (isNil(req.authContext)) {
       req.authContext = this.options.defaultAuthContext;
     }
 
-    __.merge(req.authContext, authContext);
+    merge(req.authContext, authContext);
   }
 
   checkAuthContext(options, req) {
@@ -149,13 +99,13 @@ class ReqUtils {
     let test = true;
 
     // Set defaults where empty
-    options = __.merge(Object.assign({}, this.options.defaultAuthContext), options);
-    const secCon = __.merge(Object.assign({}, this.options.defaultAuthContext), req.authContext);
+    options = merge(Object.assign({}, this.options.defaultAuthContext), options);
+    const secCon = merge(Object.assign({}, this.options.defaultAuthContext), req.authContext);
 
     // Aggregate all the options and test equality with the security context
     for (const key in secCon) {
       if (secCon.hasOwnProperty(key)) {
-        test = test && __.implies(options[key], secCon[key]);
+        test = test && implies(options[key], secCon[key]);
       }
     }
     return test;
@@ -183,7 +133,7 @@ class ReqUtils {
 
       // Only merge if the params variable lints to an object
       if (typeof linted === 'object') {
-        req.body = __.merge(req.body, linted);
+        req.body = merge(req.body, linted);
       }
       delete req.body.params;
     }
@@ -198,7 +148,7 @@ class ReqUtils {
           // Go through the possible sources in the request
           for (const source of current.source) {
             const val = source === 'headers' ? req[source][key.toLowerCase()] : req[source][key];
-            if (__.isUnset(value) && __.hasValue(val)) {
+            if (isNil(value) && !isNil(val)) {
               value = val;
             }
           }
@@ -244,7 +194,7 @@ class ReqUtils {
     for (const key in params) {
       if (params.hasOwnProperty(key)) {
         current = params[key];
-        if (__.isUnset(current)) {
+        if (isNil(current)) {
           reqParams.push(key);
         }
       }
@@ -264,7 +214,7 @@ class ReqUtils {
           const val = current(req.handler[key].value);
           req.handler[key].value = val;
           req.locals[key] = val;
-        } else if (__.isUnset(req.handler[key].value)) {
+        } else if (isNil(req.handler[key].value)) {
           // Only set default if the value is unset
           req.handler[key].value = current;
           req.locals[key] = current;
@@ -274,7 +224,7 @@ class ReqUtils {
   }
 
   // Expects an object containing the value and types for each named key
-  // e.g. { dealerID: { value: 100, type: 'int' } }
+  // e.g. { id: { value: 100, type: 'int' } }
   // Returns the array of non-matching values
   validateParams(params) {
     const test = [];
@@ -315,8 +265,8 @@ class ReqUtils {
     const retVal = {};
 
     if (err) {
-      const codes = __.merge(__.assign({}, this.options.customErrorResponseCodes), customCodes);
-      const messages = __.merge(__.assign({}, this.options.customResponseMessagesKeys), customMessagesKeys);
+      const codes = merge(assign({}, this.options.customErrorResponseCodes), customCodes);
+      const messages = merge(assign({}, this.options.customResponseMessagesKeys), customMessagesKeys);
 
       // Match error.name to specific response code
       let name = err.name || err;
@@ -349,7 +299,7 @@ class ReqUtils {
 
   // Expects an object containing paramater and security information
   // e.g. { params: {
-  //          dealerID: { type: 'int', required: true, source: ['params', 'body', 'headers', 'query'] },
+  //          id: { type: 'int', required: true, source: ['params', 'body', 'headers', 'query'] },
   //          limit: {
   //            type: 'int',
   //            required: false,
@@ -364,14 +314,14 @@ class ReqUtils {
   // The possible sources are 'params', 'body', 'headers', 'query'.
   // The handler will will search the sources in the order they are provided for each variable and only return the first
   // instance found (if one exists). All retrieved parameters are placed in `req.locals`
-  handleRequest(params, closure, next, res, req) {
+  handleRequest(handlerOptions, closure, next, res, req) {
     let err;
     req = req || this.req;
     // Check if this has already been handled
     if (!this.hasResponse(req)) {
       // AuthContext Check
-      params.security = __.merge(Object.assign({}), params.security);
-      if (!this.checkAuthContext(params.security, req)) {
+      handlerOptions.security = merge(Object.assign({}), handlerOptions.security);
+      if (!this.checkAuthContext(handlerOptions.security, req)) {
         // Unauthorized user
         this.setError(403000, req);
         err = this.options.i18n.tr('__RequestUtils.UnauthorizedAPIAccess');
@@ -380,17 +330,17 @@ class ReqUtils {
       }
 
       // Protocol check HTTP/HTTPS
-      params.secure = params.secure || false;
-      if (!__.implies(params.secure, req.secure)) {
+      handlerOptions.secure = handlerOptions.secure || false;
+      if (!implies(handlerOptions.secure, req.secure)) {
         // Unauthorized protocol
         this.setError(403001, req);
-        err = this.options.i18n.tr('__RequestUtils.UnauthorizedProtocolNoHTTP');
+        err = this.options.i18n.tr('!isNilRequestUtils.UnauthorizedProtocolNoHTTP');
         next(err);
         return err;
       }
 
       // Logic to get parameters
-      this.retrieveParams(params.params, req);
+      this.retrieveParams(handlerOptions.params, req);
 
       // Compile optional/required params
       const sepParams = this.compileRequiredParams(req.handler);
@@ -451,10 +401,10 @@ class ReqUtils {
     return undefined;
   }
 
-  handleRequestAsync(params, closure, next, res, req) {
+  handleRequestAsync(handlerOptions, closure, next, res, req) {
     return new Promise((resolve, reject) => {
-      const ret = this.handleRequest(params, closure, next, res, req);
-      if (__.hasValue(ret)) {
+      const ret = this.handleRequest(handlerOptions, closure, next, res, req);
+      if (!isNil(ret)) {
         reject(ret);
       } else {
         resolve();
