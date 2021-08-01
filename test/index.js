@@ -1,7 +1,10 @@
 // test/index.js
 
 // Dependancies
-const __ = require('@outofsync/lodash-ex');
+const __ = {
+  isNil: require('lodash.isnil'),
+  omit: require('lodash.omit'),
+};
 const chai = require('chai');
 const expect = chai.expect;
 const ReqUtils = require('../');
@@ -167,53 +170,53 @@ describe('Request Utilities', () => {
   it('retrieveParams', () => {
     reqUtils.retrieveParams(reqParams);
     // This should move all the values to the req.locals
-    expect(__.hasValue(req.locals)).to.equal(true);
-    expect(__.hasValue(req.handler)).to.equal(true);
+    expect(!__.isNil(req.locals)).to.equal(true);
+    expect(!__.isNil(req.handler)).to.equal(true);
   });
 
   it('checking value retrieval from params', () => {
-    expect(__.hasValue(req.locals.paramVar)).to.equal(true);
+    expect(!__.isNil(req.locals.paramVar)).to.equal(true);
     expect(req.locals.paramVar).to.equal(1234);
   });
 
   it('checking value retrieval from body', () => {
-    expect(__.hasValue(req.locals.bodyVar)).to.equal(true);
+    expect(!__.isNil(req.locals.bodyVar)).to.equal(true);
     expect(req.locals.bodyVar).to.equal('1234');
   });
 
   it('checking value retrieval from body \'params\' JSON string', () => {
-    expect(__.hasValue(req.locals.jsonData)).to.equal(true);
+    expect(!__.isNil(req.locals.jsonData)).to.equal(true);
     expect(req.locals.jsonData).to.equal('this is a string');
   });
 
   it('checking value retrieval from header', () => {
-    expect(__.hasValue(req.locals.headerVar)).to.equal(true);
+    expect(!__.isNil(req.locals.headerVar)).to.equal(true);
     expect(req.locals.headerVar).to.equal('1234');
   });
 
   it('checking value retrieval from query', () => {
-    expect(__.hasValue(req.locals.queryVar)).to.equal(true);
+    expect(!__.isNil(req.locals.queryVar)).to.equal(true);
     expect(req.locals.queryVar).to.equal('1234');
   });
 
   it('checking value retrieval priority where variable can come from multiple sources', () => {
-    expect(__.hasValue(req.locals.multiVar)).to.equal(true);
+    expect(!__.isNil(req.locals.multiVar)).to.equal(true);
     expect(req.locals.multiVar).to.equal('abcd');
   });
 
   it('checking that value that is not in the correct source is not retrieved', () => {
-    expect(__.hasValue(req.locals.wrongSrcVar)).to.not.equal(true);
+    expect(!__.isNil(req.locals.wrongSrcVar)).to.not.equal(true);
   });
 
   it('checking that missing value is not retrieved', () => {
-    expect(__.hasValue(req.locals.missingRequiredVar)).to.not.equal(true);
+    expect(!__.isNil(req.locals.missingRequiredVar)).to.not.equal(true);
   });
 
   it('compileRequiredParams', () => {
     sepParams = reqUtils.compileRequiredParams(req.handler);
-    expect(__.hasValue(sepParams)).to.equal(true);
-    expect(__.hasValue(sepParams.required)).to.equal(true);
-    expect(__.hasValue(sepParams.optional)).to.equal(true);
+    expect(!__.isNil(sepParams)).to.equal(true);
+    expect(!__.isNil(sepParams.required)).to.equal(true);
+    expect(!__.isNil(sepParams.optional)).to.equal(true);
   });
 
   it('hasRequiredParams', () => {
@@ -223,11 +226,11 @@ describe('Request Utilities', () => {
 
   it('handleDefaults', () => {
     reqUtils.handleDefaults(sepParams.optional);
-    expect(__.hasValue(req.locals.resetValue)).to.equal(true);
+    expect(!__.isNil(req.locals.resetValue)).to.equal(true);
     expect(req.locals.resetValue).to.equal(1);
-    expect(__.hasValue(req.locals.defaultVar)).to.equal(true);
+    expect(!__.isNil(req.locals.defaultVar)).to.equal(true);
     expect(req.locals.defaultVar).to.equal('qwerty');
-    expect(__.hasValue(req.locals.badDefaultValidation)).to.equal(true);
+    expect(!__.isNil(req.locals.badDefaultValidation)).to.equal(true);
     expect(req.locals.badDefaultValidation).to.equal('default');
   });
 
@@ -283,7 +286,7 @@ describe('Request Utilities', () => {
         security: { super: true }
       },
       () => {
-        expect(__.hasValue(req.locals)).to.equal(true);
+        expect(!__.isNil(req.locals)).to.equal(true);
         done();
       },
       () => { }
@@ -434,7 +437,7 @@ describe('Request Utilities', () => {
         security: { super: true }
       },
       (_req) => {
-        expect(__.hasValue(_req.locals)).to.equal(true);
+        expect(!__.isNil(_req.locals)).to.equal(true);
       }
     )
       .then(() => { done(); })
