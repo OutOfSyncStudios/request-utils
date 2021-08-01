@@ -3,7 +3,7 @@ declare module '@outofsync/request-utils'
 import {
   ClientRequest,
   ServerResponse,
-} from 'node:http';
+} from 'http';
 import Localize from '@outofsync/localize';
 
 type ClosureFn = (...params: any) => void;
