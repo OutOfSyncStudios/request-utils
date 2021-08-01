@@ -1,7 +1,14 @@
 declare module '@outofsync/request-utils'
 
+import {
+  ClientRequest,
+  ServerResponse,
+} from 'node:http';
 import Localize from '@outofsync/localize';
 
+type ClosureFn = (...params: any) => void;
+type ExpressHandlerFn = (req: ClientRequest, res: ServerResponse, next: ClosureFn) => void;
+type ReqUtilsCheckPermissionsFn = (req: ClientRequest) => boolean;
 type ErrorOrUndef = Error | undefined;
 
 type RequestUtilsAuthContext = {
@@ -9,13 +16,13 @@ type RequestUtilsAuthContext = {
 }
 
 interface RequestUtilsOptions {
-  checkPermission?: function;
+  checkPermission?: ReqUtilsCheckPermissionsFn;
   customErrorResponseCodes?: any;
   customResponsMessageKeys?: any;
   defaultAuthContext?: RequestUtilsAuthContext;
   defaultLang?: string;
-  i18n?: Localize;
-};
+  i18n?: typeof Localize;
+}
 
 interface RequestUtilsRequiredParamsMap {
   required: any;
@@ -36,7 +43,7 @@ interface RequestUtilsHandledError {
 interface RequestUtilsDataFieldOptions {
   type: string;
   required: boolean;
-  source: array<string>;
+  source: string[];
 }
 
 type RequestUtilsDataHandlerParams = {
@@ -50,27 +57,27 @@ interface RequestUtilsHandleRequestOptions {
 }
 
 declare class RequestUtils {
-  constructor(req: http.ClientRequest, options?: RequestUtilsOptions);
-  setSkipAuth(value: any, req?: http.ClientRequest): void;
-  skipAuth(req?: http.ClientRequest): void;
-  setTimedout(req?: http.ClientRequest): void;
-  setError(code: number, req?: http.ClientRequest): void;
-  setData(data: any, req?: http.ClientRequest): void;
-  hasResponse(req?: http.ClientRequest): void;
-  setAuthContext(authContext: RequestUtilsAuthContext, req?: http.ClientRequest): void;
-  updateAuthContext(authContext: RequestUtilsAuthContext, req?: http.ClientRequest): void;
-  checkAuthContext(options?: RequestUtilsAuthContext, req?: http.ClientRequest): void;
-  checkPermissions(req?: http.ClientRequest): void;
-  retrieveParams(params: any, req?: http.ClientRequest): void;
+  constructor(req: ClientRequest, options?: RequestUtilsOptions);
+  setSkipAuth(value: any, req?: ClientRequest): void;
+  skipAuth(req?: ClientRequest): void;
+  setTimedout(req?: ClientRequest): void;
+  setError(code: number, req?: ClientRequest): void;
+  setData(data: any, req?: ClientRequest): void;
+  hasResponse(req?: ClientRequest): void;
+  setAuthContext(authContext: RequestUtilsAuthContext, req?: ClientRequest): void;
+  updateAuthContext(authContext: RequestUtilsAuthContext, req?: ClientRequest): void;
+  checkAuthContext(options?: RequestUtilsAuthContext, req?: ClientRequest): void;
+  checkPermissions(req?: ClientRequest): void;
+  retrieveParams(params: any, req?: ClientRequest): void;
   compileRequiredParams(params?: any): RequestUtilsRequiredParamsMap;
-  hasRequiredParams(params: any): array<any>;
-  handleDefaults(params: any, req?: http.ClientRequest): void;
-  validateParams(params: any): array<any>;
+  hasRequiredParams(params: any): Array<any>;
+  handleDefaults(params: any, req?: ClientRequest): void;
+  validateParams(params: any): Array<any>;
   getResponseMessage(code: string | number, lang?: string, customMessageKeys?: any): RequestUtilsResponseMessage;
   handleCustomerErrors(err: Error | string, customCodes?: any, customMessageKeys?: any): RequestUtilsHandledError;
-  handleRequest(handlerOptions: RequestUtilsHandleRequestOptions, closure: function, next: function, res: http.ServerResponse, req?: http.ClientRequest): ErrorOrUndef;
-  handleRequestAsync(handlerOptions: RequestUtilsHandleRequestOptions, closure: function, next: function, res: http.ServerResponse, req?: http.ClientRequest): ErrorOrUndef;
-};
+  handleRequest(handlerOptions: RequestUtilsHandleRequestOptions, closure: ExpressHandlerFn, next: ClosureFn, res: ServerResponse, req?: ClientRequest): ErrorOrUndef;
+  handleRequestAsync(handlerOptions: RequestUtilsHandleRequestOptions, closure: ExpressHandlerFn, next: ClosureFn, res: ServerResponse, req?: ClientRequest): ErrorOrUndef;
+}
 
 declare const obj: RequestUtils;
 export default obj;
