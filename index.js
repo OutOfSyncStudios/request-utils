@@ -14,21 +14,24 @@ const defaultDictionary = require('./src/lib/constants');
  * A utility class to process common HTTP request parameters and handling. This class exists to move repeated
  * functionality out of controllers to reduce repeated code
  * @class ReqUtils
- * @param {Request} req - The HTTP Request object (e.g. from `express` or some other HTTP handler)
+ * @param {*} options - The options to pass into the 
  * @example
- * let reqUtils = new ReqUtils(req);
+ * let reqUtils = new ReqUtils(options);
  */
 class ReqUtils {
-  constructor(req, options) {
+  constructor(options) {
     this.options = {
       // eslint-disable-next-line no-unused-vars
       checkPermissions: ((_req) => { return true; }),
       customErrorResponseCodes: {},
       customResponseMessagesKeys: {},
       defaultAuthContext: { super: false, signed: false, server: false, client: false },
-      defaultLang: 'en'
+      defaultLang: 'en',
+      debug: false,
+      enableAuthContextCheck: true,
+      enableForceTlsCheck: true,
+      enablePermissionsCheck: true,
     };
-    this.req = req;
     merge(this.options, options || {});
 
     if (!this.options.i18n || !(this.options.i18n instanceof Localize)) {
@@ -41,61 +44,40 @@ class ReqUtils {
     }
   }
 
-  setSkipAuth(value, req) {
-    req = req || this.req;
-    req.skipAuth = Boolean(value);
-  }
-
-  skipAuth(req) {
-    req = req || this.req;
-    return req && req.skipAuth;
-  }
-
   setTimedout(req) {
-    req = req || this.req;
     req.timedout = true;
     req.respCode = 429000;
   }
 
-  setError(code, req) {
-    req = req || this.req;
+  setError(req, code) {
     req.hasError = true;
     req.respCode = code;
   }
 
-  setData(data, req) {
-    req = req || this.req;
+  setData(req, data) {
     req.hasData = true;
     req.data = data;
   }
 
   hasResponse(req) {
-    req = req || this.req;
     return req && (req.hasData || req.hasError || req.timedout);
   }
 
-  setAuthContext(authContext, req) {
-    req = req || this.req;
-
+  setAuthContext(req, authContext) {
     if (isNil(req.authContext)) {
       req.authContext = this.options.defaultAuthContext;
     }
-
     req.authContext = merge(Object.assign({}, this.options.defaultAuthContext), authContext);
   }
 
-  updateAuthContext(authContext, req) {
-    req = req || this.req;
-
+  updateAuthContext(req, authContext) {
     if (isNil(req.authContext)) {
       req.authContext = this.options.defaultAuthContext;
     }
-
     merge(req.authContext, authContext);
   }
 
-  checkAuthContext(options, req) {
-    req = req || this.req;
+  checkAuthContext(req, options) {
     let test = true;
 
     // Set defaults where empty
@@ -113,12 +95,10 @@ class ReqUtils {
 
   // Checks the current request against permissions
   checkPermissions(req) {
-    req = req || this.req;
     return this.options.checkPermissions(req);
   }
 
-  retrieveParams(params, req) {
-    req = req || this.req;
+  retrieveParams(req, params) {
     req.handler = params;
     req.locals = {};
     let current;
@@ -165,6 +145,8 @@ class ReqUtils {
         req.locals[key] = validator.convert(value, current.type);
       }
     }
+
+    return req.locals;
   }
 
   compileRequiredParams(params) {
@@ -203,8 +185,7 @@ class ReqUtils {
   }
 
   // Looks for keys in the req.locals, if they are not set then it sets a default value
-  handleDefaults(params, req) {
-    req = req || this.req;
+  handleDefaults(req, params) {
     let current;
     for (const key in params) {
       if (params.hasOwnProperty(key)) {
@@ -259,7 +240,7 @@ class ReqUtils {
     return message;
   }
 
-  handleCustomErrors(err, customCodes, customMessagesKeys) {
+  handleCustomErrors(req, err, customCodes, customMessagesKeys) {
     let msg = null;
     let code = 500001;
     const retVal = {};
@@ -279,7 +260,7 @@ class ReqUtils {
         name = this.options.i18n.tr('__RequestUtils.NoDetails');
       }
 
-      this.setError(code);
+      this.setError(req, code);
       const message = err.message || name || err;
       retVal.details = message;
       const custMsg = this.getResponseMessage(code, null, messages);
@@ -308,102 +289,106 @@ class ReqUtils {
   //          },
   //          page: { type: 'int', required: false, source: ['params', 'body', 'headers', 'query'], default: 1 }
   //        },
-  //        security: { super: true, server: true, client: true },
-  //        secure: false
+  //        authContext: { super: true, server: true, client: true },
+  //        forceTls: false
   //      }
   // The possible sources are 'params', 'body', 'headers', 'query'.
   // The handler will will search the sources in the order they are provided for each variable and only return the first
   // instance found (if one exists). All retrieved parameters are placed in `req.locals`
-  handleRequest(handlerOptions, closure, next, res, req) {
+  handleRequestSync(handlerOptions, closure, req, res, next) {
     let err;
-    req = req || this.req;
+    
     // Check if this has already been handled
-    if (!this.hasResponse(req)) {
-      // AuthContext Check
-      handlerOptions.security = merge(Object.assign({}), handlerOptions.security);
-      if (!this.checkAuthContext(handlerOptions.security, req)) {
+    if (this.hasResponse(req)) {
+      next();
+      return undefined;
+    }
+
+    // AuthContext Check
+    if (this.options.enableAuthContextCheck) {
+      handlerOptions.authContext = merge(Object.assign({}), handlerOptions.authContext);
+      if (!this.checkAuthContext(req, handlerOptions.authContext)) {
         // Unauthorized user
-        this.setError(403000, req);
+        this.setError(req, 403000);
         err = this.options.i18n.tr('__RequestUtils.UnauthorizedAPIAccess');
         next(err);
         return err;
       }
-
-      // Protocol check HTTP/HTTPS
-      handlerOptions.secure = handlerOptions.secure || false;
-      if (!implies(handlerOptions.secure, req.secure)) {
-        // Unauthorized protocol
-        this.setError(403001, req);
-        err = this.options.i18n.tr('!isNilRequestUtils.UnauthorizedProtocolNoHTTP');
-        next(err);
-        return err;
-      }
-
-      // Logic to get parameters
-      this.retrieveParams(handlerOptions.params, req);
-
-      // Compile optional/required params
-      const sepParams = this.compileRequiredParams(req.handler);
-      // Check Required params
-      const reqParams = this.hasRequiredParams(sepParams.required);
-      if (reqParams.length > 0) {
-        // We have missing parameters, report the error
-        this.setError(400001, req);
-        // Return an error below
-        err = this.options.i18n.tr('__RequestUtils.BadRequestMissingParams', null, reqParams);
-        next(err);
-        return err;
-      }
-
-      // Permissions Check
-      if (!this.checkPermissions(req)) {
-        // Unauthorized user
-        this.setError(403000, req);
-        err = this.options.i18n.tr('__RequestUtils.UnauthorizedNoAccess');
-        next(err);
-        return err;
-      }
-
-      // Set default values for optional params
-      this.handleDefaults(sepParams.optional, req);
-
-      // Validate params
-      const invalidParams = this.validateParams(req.handler);
-      if (invalidParams.length > 0) {
-        // We have invalid paramaters, report the error
-        this.setError(400002, req);
-        // Return an error below
-        err = this.options.i18n.tr('__RequestUtils.Parameters');
-        let cnt = 0;
-        for (const value of invalidParams) {
-          if (cnt > 0) {
-            err += ', ';
-          }
-          err += this.options.i18n.tr('__RequestUtils.KeyType', null, value.key, value.type);
-          cnt += 1;
-        }
-        err += '.';
-        next(err);
-        return err;
-      }
-
-      // Run closure function
-      try {
-        closure(req, res, next);
-      } catch (innerErr) {
-        this.setError(500001, req);
-        next(innerErr);
-      }
-    } else {
-      next();
     }
 
+    // Protocol check HTTP/HTTPS
+    if (this.options.enableForceTlsCheck) {
+      handlerOptions.forceTls = handlerOptions.forceTls || false;
+      if (!implies(handlerOptions.forceTls, req.secure)) {
+        // Unauthorized protocol 
+        this.setError(req, 403001);
+        err = this.options.i18n.tr('__RequestUtils.UnauthorizedProtocolNoHTTP');
+        next(err);
+        return err;
+      }
+    }
+
+    // Logic to get parameters
+    const locals = this.retrieveParams(req, handlerOptions.params);
+
+    // Compile optional/required params
+    const sepParams = this.compileRequiredParams(req.handler);
+    // Check Required params
+    const reqParams = this.hasRequiredParams(sepParams.required);
+    if (reqParams.length > 0) {
+      // We have missing parameters, report the error
+      this.setError(req, 400001);
+      // Return an error below
+      err = this.options.i18n.tr('__RequestUtils.BadRequestMissingParams', null, reqParams);
+      next(err);
+      return err;
+    }
+
+    // Permissions Check
+    if (this.options.enablePermissionsCheck && !this.checkPermissions(req)) {
+      // Unauthorized user
+      this.setError(req, 403000);
+      err = this.options.i18n.tr('__RequestUtils.UnauthorizedNoAccess');
+      next(err);
+      return err;
+    }
+
+    // Set default values for optional params
+    this.handleDefaults(req, sepParams.optional);
+
+    // Validate params
+    const invalidParams = this.validateParams(req.handler);
+    if (invalidParams.length > 0) {
+      // We have invalid paramaters, report the error
+      this.setError(req, 400002);
+      // Return an error below
+      err = this.options.i18n.tr('__RequestUtils.Parameters');
+      let cnt = 0;
+      for (const value of invalidParams) {
+        if (cnt > 0) {
+          err += ', ';
+        }
+        err += this.options.i18n.tr('__RequestUtils.KeyType', null, value.key, value.type);
+        cnt += 1;
+      }
+      err += '.';
+      next(err);
+      return err;
+    }
+
+    // Run closure function
+    try {
+      closure(locals, req, res, next);
+    } catch (innerErr) {
+      this.setError(req, 500001);
+      next(innerErr);
+    }
     return undefined;
   }
 
-  handleRequestAsync(handlerOptions, closure, next, res, req) {
+  handleRequest(handlerOptions, closure, req, res, next) {
     return new Promise((resolve, reject) => {
-      const ret = this.handleRequest(handlerOptions, closure, next, res, req);
+      const ret = this.handleRequestSync(handlerOptions, closure, req, res, next);
       if (!isNil(ret)) {
         reject(ret);
       } else {

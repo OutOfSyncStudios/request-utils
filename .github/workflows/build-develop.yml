@@ -28,7 +28,7 @@ jobs:
         uses: actions/checkout@master
 
       - name: 'Use Node.js ${{ matrix.node-version }}'
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
           always-auth: true
           node-version: ${{ matrix.node-version }}
@@ -44,7 +44,7 @@ jobs:
           sudo chown -R $USER:$GROUP ~/.npm || true
           sudo chown -R $USER:$GROUP ~/.config || true
           npm ci
-          gulp
+          npm run test
           npm run coverage
         env:
           NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -10,9 +10,7 @@
 [![Dependencies badge](https://david-dm.org/OutOfSyncStudios/request-utils/status.svg)](https://david-dm.org/OutOfSyncStudios/request-utils?view=list)
 
 
-`request-utils` is library designed to simplify the processing of HTTP Request handling and parameters parsing by abstracting commonly reused processing patterns.
-
-It can be used with any framework that creates and uses HTTPRequest objects.
+`request-utils` is simple framework designed to simplify HTTP Request handling and parameters parsing by abstracting commonly reused processing patterns. It can be used with any framework that creates and uses HTTPRequest objects.
 
 # [Installation](#installation)
 <a name="installation"></a>
@@ -26,12 +24,17 @@ npm install @outofsync/request-utils
 
 ```js
 const ReqUtils = require('@outofsync/request-utils');
+const reqUtils = new ReqUtils();
 
-// Example Express.js handler
-function handler(req, res, next) {
-  const reqUtils = new ReqUtils(req);
+// Example Express.js handler and controller functions
+function handler(locals, req, res, next) {
+  console.log(locals.dataVal1);
+  console.log(locals.dataVal2);
+  next();
+}
 
-  reqUtils.handleRequestAsync(
+async function controller(req, res, next) {
+  await reqUtils.handleRequest(
     {
       params: {
         dataVal1: {
@@ -45,35 +48,50 @@ function handler(req, res, next) {
           required: true
         }
       },
-      security: { super: true, server: true }
+      authContext: { super: true, server: true }
     },
-    // Closure function that does processing if the request passes initial inspection
-    (_req, _res, _next) => {
-      console.log(_req.locals.dataVal1);
-      console.log(_req.locals.dataVal2);
-      _next();
-    },
-    next,
-    res
-  )
-  .catch(() => {});
+    handler, 
+    req, 
+    res, 
+    next
+  );
 }
 ```
+
+# [Upgrading from v3 to v4](#upgrade)
+If you are upgrading from v3 to v4 you need to be aware of the following breaking changes: 
+* The `ctor` ReqUtils is no longer allows invoked with the `req` (HttpRequest) object as a parameter. 
+* All methods are now stateless and require the `req` (HttpRequest) to be passed as the first parameter. Reordering parameters to the beginning of the function signature and now being required.
+* The handleRequest and handleRequestAsync methods have been renamed to reflect a more promise-based design. 
+  * The old `handleRequestAsync` is now just `handleRequest`.
+  * The old `handleRequest` is now `handleRequestSync`.
+* The handleRequest methods have had their parameters reordered so that they follow typical ordering in other libraries -- `req, res, next`
+* The handler function signature for passed handler to the handleRequest methods all now have a function signature of `(locals, req, res, next)` where locals are the loaded variabls.
+* The following paramters passed as a part of handleRequest methods have been changed:
+  * `security` parameter option that previously performed rudimentary context checking of a request has been renamed `authContext`.
+  * `secure` parameter option that previously performed a TLS protocol check, is now named `forceTls`.
+* The `skipAuth` and `setSkipAuth` methods have been removed.
+* New options have been added for 
+
+***Existing codebases will need to be refactored to account for these changes.***
 
 # [API Reference](#api)
 <a name="api"></a>
 
-## new ReqUtils(req [, options]) &#x27fe; instanceof ReqUtils
-Create an instance of ReqUtils with the `req` HTTP Request object provided. Additional configuration parameters may be passed in the `options`,
-
-The `options` is a object why may contain any, all, or none of the following:
+## new ReqUtils([params]) &#x27fe; instanceof ReqUtils
+Create an instance of ReqUtils. Additional configuration parameters may be passed in `params` map as follows:
 
 | Param | Type | Default | Description |
 | ----- | ---- | ------- | ----------- |
-| checkPermissions | Function(HTTPRequest) &#x27fe; bool | A function to perform additional permission check which returns a boolean if the check passes |
-| customErrorResponseCodes | [CustomCodes](#types-custom-codes)  | A `CustomCodes` object to be used with handleCustomErrors, which checks an error message for the message and sets the appropriate code |
-| customResponseMessages | [CustomMessages](#types-custom-messages) | A `CustomMessages` object which defines the error message details and status codes for various error codes |
-| defaultAuthContext | [AuthContext](#types-auth-context) | A `AuthContext` object which defines the default AuthContext state |
+| checkPermissions | Function(HTTPRequest) &#x27fe; bool | `() => { return true; }` | A function to perform additional permission check which returns a boolean if the check passes |
+| customErrorResponseCodes | [CustomCodes](#types-custom-codes) | See Below | A `CustomCodes` object to be used with handleCustomErrors, which checks an error message for the message and sets the appropriate code |
+| customResponseMessages | [CustomMessages](#types-custom-messages) | See Below | A `CustomMessages` object which defines the error message details and status codes for various error codes |
+| defaultAuthContext | [AuthContext](#types-auth-context) | `{ super: false, signed: false, server: false, client: false }` | A `AuthContext` object which defines the default AuthContext state |
+| defaultLang | string | `'en'` | Language definition to use when looking up CustomCodes and CustomMessages string |
+| debug | boolean | `false` | Enable debugging output |
+| enableAuthContextCheck | boolean | `true` | handleRequest methods will check AuthContext provided when enabled |
+| enableForceTlsCheck | boolean | `true` | handleRequest methods will check if request is over TLS when enabled |
+| enablePermissionsCheck | boolean | `true` | handleRequest methods will run the permissions check function when enabled |
 
 **Defaults**:
 ```js
@@ -109,71 +127,64 @@ The `options` is a object why may contain any, all, or none of the following:
   }
 ```
 
-**Note**: Most methods allow a `req` parameter to be passed to override the `req` that was passed into the constructor.
-
 ## Request Handling
 
-### .handleRequest(params, handler, next, res[, req]) &#x27fe; void / Error
+### .handleRequest(params, handler, req, res, next) &#x27fe; Promise<void|Error>
+### .handleRequestSync(params, handler, req, res, next) &#x27fe; void / Error
 Using the `params` provides, performs the following, so long as the `req` has not already been processed.
-1. Checks the AuthContext of the request against `params.security`. Sets 403000 error on failure.
-2. Checks the Security requirement (`params.secure`) of the request. (Was this request made over HTTPS when secure == true?). Sets 403001 error on failure.
+1. When enabled, checks the current request AuthContext (as updated by the `setAuthContext` or `updateAuthContext` methods) of the request against `params.authContext`. Sets `403000` response code on failure.
+2. When enabled, checks the TLS Protocol requirement (`params.forceTls`) of the request. (Was this request made over HTTPS when `req.secure === true`?). Sets `403001` response code on failure.
 3. Retrieves all request parameters configured (`params.params`) from the request.
-4. Checks required request parameters. Sets 400001 error on failure.
-5. Handle default values for options request parameters
-6. Validates that all request parameters are over the expected data types. Sets 400002 on failure.
-7. Runs `checkPermission`. Sets 403000 error on failure.
-8. If none of the above generates an error, then runs the `handler` function provided. If the handler throws an Exception, then sets a 500001 error.
+4. Checks for required HTTP Request parameters. Sets `400001` reponse code on failure.
+5. Sets default values for optional request parameters that are unset
+6. Validates that all request parameters are set to the expected data types. Sets `400002` response code on failure.
+7. When enabled, runs `checkPermission`. Sets `403000` response code on failure.
+8. If none of the above generates an error, then runs the `handler` function provided. If the handler throws an Exception, it then sets a `500001` error.
 
-`next` is the asynchronous handler used by [ExpressJS](), [SailsJS](), and other similar frameworks to continue execution or return errors. `res` is the HTTP Response object for the request. `req` is the HTTPRequest object.
-
-`params` are outlined in the [Request Handler Parameters](#type-handler-params) below.
-
-The `handler` is a function with a function signature as follow:
+* `req` is the HTTP Request object.
+* `res` is the HTTP Response object.
+* `next` is the asynchronous handler used by [ExpressJS](), [SailsJS](), and other similar frameworks to continue execution or return errors. `res` is the HTTP Response object for the request. `req` is the HTTPRequest object.
+* `params` are outlined in the [Request Handler Parameters](#type-handler-params) below.
+* `handler` is a function with a function signature as follow:
 ```js
-  (req, res, next) => {
-    // Do something
+  (locals, req, res, next) => {
+    // Do something ... 
+    // locals stores the parameters that have been parsed 
+    // from the request as passed to the handleRequest
+    // method in `params.params`.
   }
 ```
 
 **Example Usage**:
 ```js
-  reqUtils.handleRequest({
-    params: {
+function handler(locals, req, res, next) {
+  console.log(locals);
+  next()
+}
 
-    },
-    security: {
+reqUtils.handleRequestSync({
+    params: { },
+    authContext: {
       super: true,    // Only accessible by super-users
       server: true,   // Only accessible from a sever-based context
       client: false
     },
-    secure: false
+    forceTls: false
   },
-  (_req, _res, _next) => {
-
-  }
-  , next, res);
-```
-
-### .handleRequestAsync(...) &#x27fe; Promise
-Asynchronous version of `.handleRequest`.  
-
-```js
-   reqUtils.handleRequestAsync(...)
-   .then(() => {
-     // Post process successful request handling.
-   })
-   .catch((err) => {
-     // Post-process unsuccessful request handling.
-   });
+  handler, 
+  req, 
+  res, 
+  next
+);
 ```
 
 ## Error Handling
 
-### .getResponseMessage(code, customMessages) &#x27fe; [ResponseMessage](#types-reponse-message) / null
-Checks the `code` for a match in the merged `ReqUtils.customResponseMessages`. If a match is found, then the corresponding response message is returned.
+### .getResponseMessage(code, lang, customMessages) &#x27fe; [ResponseMessage](#types-reponse-message) / null
+Checks the `code` for a match in the merged `ReqUtils.customResponseMessages` dictionary for the given `lang`. If the language dictionary is found and a match exists, then the corresponding response message is returned. If no matching message is found for the language specified or the language can't be found, then the custom messsages are used to reconcile the message code.
 
-### .handleCustomErrors(err, customCodes, customMessages) &#x27fe; object
-Checks `err.name` for a match in the merged `ReqUtils.customErrorResponseCodes` and `customCodes`. If a match is found, then the found code is looked up in the merged `ReqUtils.customResponseMessages` and `customMessages` for a summary message.  If no code is found, then the code is set to 500001. If no summary is found, then the summary message is set to 'An unexpected error has occurred -- {err.name}'. The code and error are then returned in a objects. If `err` is null, then the object returned contains a `null` message. If `err.name` is null, then it defaults to 'No details'.
+### .handleCustomErrors(req, err, customCodes, customMessages) &#x27fe; object
+`req` is the HTTP Request object. Checks `err.name` for a match in the merged `ReqUtils.customErrorResponseCodes` and `customCodes`. If a match is found, then the found code is looked up in the merged `ReqUtils.customResponseMessages` and `customMessages` for a summary message.  If no code is found, then the code is set to 500001. If no summary is found, then the summary message is set to 'An unexpected error has occurred -- {err.name}'. The code and error are then returned in a objects. If `err` is null, then the object returned contains a `null` message. If `err.name` is null, then it defaults to 'No details'.
 
 ```js
   // { msg: 'Something went wrong', code: 500001 }
@@ -181,41 +192,35 @@ Checks `err.name` for a match in the merged `ReqUtils.customErrorResponseCodes` 
 
 ## Utility
 
-### .setSkipAuth(value [,req])
-Set the `req.skipAuth` flag with the `value` provided. Any non-boolean `value` will be coerced to a boolean.
-
-### .skipAuth([req]) &#x27fe; boolean
-Return the value of the `req.skipAuth` flag.
-
-### .setTimedout([req])
+### .setTimedout(req)
 Set the `req.timedout` flag to true and sets the `req.respCode` to 429000.
 
-### .setError(code [, req])
+### .setError(req, code)
 Set the `req.hasError` flag to true and sets the `req.respCode` to `code` provided.
 
-### .setData(data [, req])
+### .setData(req, data)
 Set the `req.hasData` flag to true and sets `req.data` to `data` provided, so that it can be processed downstream.
 
-### .hasResponse([req]) &#x27fe; boolean
+### .hasResponse(req) &#x27fe; boolean
 Test the `req` to see if the `hasData`, `hasError` or `timedout` flags have been set
 
-### .setAuthContext(authContext [, req])
+### .setAuthContext(req, authContext)
 Set the `req.authContext` flags with fills from the `defaultAuthContext`.
 
-### .updateAuthContext(authContext [,req])
+### .updateAuthContext(req, authContext)
 Merge `authContext` values into `req.authContext` values, overwriting any values currently set in `req.authContext`.
 
-### .checkAuthContext(options [,req]) &#x27fe; boolean
+### .checkAuthContext(req, options) &#x27fe; boolean
 Compares the `options` values against the `req.authContext` ensuring that any option set true is also true in the
 `req.authContext`.  Any value set false in the options is ignored. Returns false if any option is true, but the
 authContext is false.
 
-### .checkPermissions([req]) &#x27fe; boolean
+### .checkPermissions(req) &#x27fe; boolean
 Runs the configured `checkPermissions` function configured as a part of the initialization options for ReqUtils.
 
 ## Parameter Binding
 
-### .retrieveParams(params [,req])
+### .retrieveParams(req, params)
 Sets the `req.handler` from the `params` provided, then gathers, parses, and converts these values from the request and
 places the values into both `req.handler.[key].value` `req.locals.[key]`.
 
@@ -232,7 +237,7 @@ Analyzes the key values in the `requiredParams` and checks that each of them hav
 value is returned in an array. With an empty array being returned if there are no missing values. `requiredParams` is
 the `.required` key from the object returned from `.compileRequiredParams`
 
-### .handleDefaults(optionalParams [,req])
+### .handleDefaults(req, optionalParams)
 Reviews the `optionalParameter` key values set and compares the keys with the values set in `req.locals`. If any
 value is missing, then the `default` value is assigned to the key. `optionalParams` is the `.options` key from the
 object returned from `.compileRequiredParams`
@@ -332,7 +337,7 @@ const params = {
   security: {
 
   },
-  secure: false
+  forceTls: false
 }
 ```
 
@@ -340,7 +345,7 @@ const params = {
 | --- | ---- | ----------- | -------- |
 | params | [Request Parameter Collection](#types-request-parameter-collection) | The request parameters for this handler. | Y |
 | security | [Auth Context](#) | The required Auth Context for this request | N |
-| secure | boolean | Whether this request is required to be made over HTTPS. Default: `false`. | N |
+| forceTls | boolean | Whether this request is required to be made over HTTPS. Default: `false`. | N |
 
 ## CustomCodes
 <a name="types-custom-codes"></a>
@@ -383,4 +388,4 @@ A collection of [ResponseMessage](#types-reponse-message) objects, with a matchi
 <a name="license"></a>
 
 Copyright (c) 2018, 2019 Jay Reardon
-Copyright (c) 2019-2021 Out of Sync Studios LLC  -- Licensed under the MIT license.
+Copyright (c) 2019-2022 Out of Sync Studios LLC  -- Licensed under the MIT license.
