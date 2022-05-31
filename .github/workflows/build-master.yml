@@ -11,8 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [14.x]
         slack-channel: ['build-monitoring']
+
     steps:
       - name: 'Notify build start'
         uses: voxmedia/github-action-slack-notify-build@v1
@@ -27,12 +27,26 @@ jobs:
       - name: 'Checkout'
         uses: actions/checkout@master
 
-      - name: 'Use Node.js ${{ matrix.node-version }}'
+      - name: 'Detect Node Version'
+        id: detect-node-version
+        shell: bash
+        run: |
+          if [ -f ./.nvmrc ]; then
+            nvmrc=$(cat .nvmrc)
+          elif [ -f ./.node-version ]; then
+            nvmrc=$(cat .node-version)
+          else
+            nvmrc=0
+          fi
+          echo "::set-output name=nvmrc::$nvmrc"
+
+      - name: 'Use Node.js ${{ steps.detect-node-version.outputs.nvmrc }}'
         uses: actions/setup-node@v2
         with:
           always-auth: true
-          node-version: ${{ matrix.node-version }}
-
+          node-version: '${{ steps.detect-node-version.outputs.nvmrc }}'
+          cache: 'npm'
+          
       - name: 'NPM Test'
         shell: bash
         run: |
