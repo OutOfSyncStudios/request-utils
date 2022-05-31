@@ -52,7 +52,7 @@ jobs:
         run: |
           npm install -g gulp-cli gulp@4
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
-          npm config set registry http://registry.npmjs.org
+          npm config set registry https://registry.npmjs.org
           npm config set always-auth true
           sudo mkdir ~/.npm || true
           sudo chown -R $USER:$GROUP ~/.npm || true
