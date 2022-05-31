@@ -7,7 +7,7 @@ import {
 import Localize from '@outofsync/localize';
 
 type ClosureFn = (...params: any) => void;
-type ExpressHandlerFn = (req: ClientRequest, res: ServerResponse, next: ClosureFn) => void;
+type ExpressHandlerFn = (locals: any, req: ClientRequest, res: ServerResponse, next: ClosureFn) => void;
 type ReqUtilsCheckPermissionsFn = (req: ClientRequest) => boolean;
 type ErrorOrUndef = Error | undefined;
 

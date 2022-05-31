@@ -69,17 +69,17 @@ let reqUtils;
 describe('Request Utilities', () => {
   let sepParams;
   before((done) => {
-    reqUtils = new ReqUtils(req, reqUtilOptions);
+    reqUtils = new ReqUtils(reqUtilOptions);
     reqUtils.options.i18n.loadDictionary('en', basicDictionary);
     done();
   });
 
-  it('constructor', () => {
+  it('ctor', () => {
     expect(reqUtils).to.be.instanceof(ReqUtils);
   });
 
   it('setTimedout', () => {
-    reqUtils.setTimedout();
+    reqUtils.setTimedout(req);
     expect(req.timedout).to.equal(true);
     expect(req.respCode).to.equal(429000);
     req.timedout = false;
@@ -87,7 +87,7 @@ describe('Request Utilities', () => {
   });
 
   it('setError', () => {
-    reqUtils.setError(12345);
+    reqUtils.setError(req, 12345);
     expect(req.hasError).to.equal(true);
     expect(req.respCode).to.equal(12345);
     req.hasError = false;
@@ -95,25 +95,18 @@ describe('Request Utilities', () => {
   });
 
   it('setData', () => {
-    reqUtils.setData({ message: 'OK' });
+    reqUtils.setData(req, { message: 'OK' });
     expect(req.hasData).to.equal(true);
     expect(req.data.message).to.equal('OK');
     req.data = null;
   });
 
   it('hasResponse', () => {
-    expect(reqUtils.hasResponse()).to.equal(true);
-  });
-
-  it('skipAuth', () => {
-    reqUtils.setSkipAuth(1);
-    expect(reqUtils.skipAuth()).to.equal(true);
-    reqUtils.setSkipAuth('');
-    expect(reqUtils.skipAuth()).to.equal(false);
+    expect(reqUtils.hasResponse(req)).to.equal(true);
   });
 
   it('setAuthContext', () => {
-    reqUtils.setAuthContext({ super: false, signed: false, server: false, client: false });
+    reqUtils.setAuthContext(req, { super: false, signed: false, server: false, client: false });
     expect(req.authContext).to.exist;
     expect(req.authContext.super).to.equal(false);
     expect(req.authContext.signed).to.equal(false);
@@ -121,98 +114,103 @@ describe('Request Utilities', () => {
     expect(req.authContext.client).to.equal(false);
   });
 
-  it('updateAuthContext', () => {
-    reqUtils.updateAuthContext({ super: true });
-    expect(req.authContext).to.exist;
-    expect(req.authContext.super).to.equal(true);
-  });
-
-  it('updateAuthContext with empty context', () => {
-    req.authContext = null;
-    reqUtils.updateAuthContext({ });
-    expect(req.authContext).to.exist;
-    expect(req.authContext.super).to.equal(false);
+  describe('updateAuthContext', () => {
+    it('normal function', () => {
+      reqUtils.updateAuthContext(req, { super: true });
+      expect(req.authContext).to.exist;
+      expect(req.authContext.super).to.equal(true);
+    });
+  
+    it('with empty context', () => {
+      req.authContext = null;
+      reqUtils.updateAuthContext(req, { });
+      expect(req.authContext).to.exist;
+      expect(req.authContext.super).to.equal(false);
+    }); 
   });
 
   it('checkAuthContext', () => {
-    reqUtils.setAuthContext({ super: false, signed: false, server: false, client: false });
-    expect(reqUtils.checkAuthContext({ super: true })).to.equal(false);
-    expect(reqUtils.checkAuthContext({ signed: true })).to.equal(false);
-    expect(reqUtils.checkAuthContext({ server: true })).to.equal(false);
-    expect(reqUtils.checkAuthContext({ client: true })).to.equal(false);
-    reqUtils.updateAuthContext({ client: true });
-    expect(reqUtils.checkAuthContext({ super: true })).to.equal(false);
-    expect(reqUtils.checkAuthContext({ signed: true })).to.equal(false);
-    expect(reqUtils.checkAuthContext({ server: true })).to.equal(false);
-    expect(reqUtils.checkAuthContext({ client: true })).to.equal(true);
-    reqUtils.updateAuthContext({ server: true, client: false });
-    expect(reqUtils.checkAuthContext({ super: true })).to.equal(false);
-    expect(reqUtils.checkAuthContext({ signed: true })).to.equal(false);
-    expect(reqUtils.checkAuthContext({ server: true })).to.equal(true);
-    expect(reqUtils.checkAuthContext({ client: true })).to.equal(false);
-    reqUtils.updateAuthContext({ signed: true, server: false });
-    expect(reqUtils.checkAuthContext({ super: true })).to.equal(false);
-    expect(reqUtils.checkAuthContext({ signed: true })).to.equal(true);
-    expect(reqUtils.checkAuthContext({ server: true })).to.equal(false);
-    expect(reqUtils.checkAuthContext({ client: true })).to.equal(false);
-    reqUtils.updateAuthContext({ super: true, signed: false });
-    expect(reqUtils.checkAuthContext({ super: true })).to.equal(true);
-    expect(reqUtils.checkAuthContext({ signed: true })).to.equal(false);
-    expect(reqUtils.checkAuthContext({ server: true })).to.equal(false);
-    expect(reqUtils.checkAuthContext({ client: true })).to.equal(false);
+    reqUtils.setAuthContext(req, { super: false, signed: false, server: false, client: false });
+    expect(reqUtils.checkAuthContext(req, { super: true })).to.equal(false);
+    expect(reqUtils.checkAuthContext(req, { signed: true })).to.equal(false);
+    expect(reqUtils.checkAuthContext(req, { server: true })).to.equal(false);
+    expect(reqUtils.checkAuthContext(req, { client: true })).to.equal(false);
+    reqUtils.updateAuthContext(req, { client: true });
+    expect(reqUtils.checkAuthContext(req, { super: true })).to.equal(false);
+    expect(reqUtils.checkAuthContext(req, { signed: true })).to.equal(false);
+    expect(reqUtils.checkAuthContext(req, { server: true })).to.equal(false);
+    expect(reqUtils.checkAuthContext(req, { client: true })).to.equal(true);
+    reqUtils.updateAuthContext(req, { server: true, client: false });
+    expect(reqUtils.checkAuthContext(req, { super: true })).to.equal(false);
+    expect(reqUtils.checkAuthContext(req, { signed: true })).to.equal(false);
+    expect(reqUtils.checkAuthContext(req, { server: true })).to.equal(true);
+    expect(reqUtils.checkAuthContext(req, { client: true })).to.equal(false);
+    reqUtils.updateAuthContext(req, { signed: true, server: false });
+    expect(reqUtils.checkAuthContext(req, { super: true })).to.equal(false);
+    expect(reqUtils.checkAuthContext(req, { signed: true })).to.equal(true);
+    expect(reqUtils.checkAuthContext(req, { server: true })).to.equal(false);
+    expect(reqUtils.checkAuthContext(req, { client: true })).to.equal(false);
+    reqUtils.updateAuthContext(req, { super: true, signed: false });
+    expect(reqUtils.checkAuthContext(req, { super: true })).to.equal(true);
+    expect(reqUtils.checkAuthContext(req, { signed: true })).to.equal(false);
+    expect(reqUtils.checkAuthContext(req, { server: true })).to.equal(false);
+    expect(reqUtils.checkAuthContext(req, { client: true })).to.equal(false);
   });
 
   it('checkPermissions', () => {
-    expect(reqUtils.checkPermissions()).to.equal(true);
+    expect(reqUtils.checkPermissions(req)).to.equal(true);
     req.locals = {};
   });
 
-  it('retrieveParams', () => {
-    reqUtils.retrieveParams(reqParams);
-    // This should move all the values to the req.locals
-    expect(!__.isNil(req.locals)).to.equal(true);
-    expect(!__.isNil(req.handler)).to.equal(true);
-  });
-
-  it('checking value retrieval from params', () => {
-    expect(!__.isNil(req.locals.paramVar)).to.equal(true);
-    expect(req.locals.paramVar).to.equal(1234);
-  });
-
-  it('checking value retrieval from body', () => {
-    expect(!__.isNil(req.locals.bodyVar)).to.equal(true);
-    expect(req.locals.bodyVar).to.equal('1234');
-  });
-
-  it('checking value retrieval from body \'params\' JSON string', () => {
-    expect(!__.isNil(req.locals.jsonData)).to.equal(true);
-    expect(req.locals.jsonData).to.equal('this is a string');
-  });
-
-  it('checking value retrieval from header', () => {
-    expect(!__.isNil(req.locals.headerVar)).to.equal(true);
-    expect(req.locals.headerVar).to.equal('1234');
-  });
-
-  it('checking value retrieval from query', () => {
-    expect(!__.isNil(req.locals.queryVar)).to.equal(true);
-    expect(req.locals.queryVar).to.equal('1234');
-  });
-
-  it('checking value retrieval priority where variable can come from multiple sources', () => {
-    expect(!__.isNil(req.locals.multiVar)).to.equal(true);
-    expect(req.locals.multiVar).to.equal('abcd');
-  });
-
-  it('checking that value that is not in the correct source is not retrieved', () => {
-    expect(!__.isNil(req.locals.wrongSrcVar)).to.not.equal(true);
-  });
-
-  it('checking that missing value is not retrieved', () => {
-    expect(!__.isNil(req.locals.missingRequiredVar)).to.not.equal(true);
+  describe('retrieveParams', () => {
+    it('retrieveParams', () => {
+      reqUtils.retrieveParams(req, reqParams);
+      // This should move all the values to the req.locals
+      expect(!__.isNil(req.locals)).to.equal(true);
+      expect(!__.isNil(req.handler)).to.equal(true);
+    });
+  
+    it('checking value retrieval from params', () => {
+      expect(!__.isNil(req.locals.paramVar)).to.equal(true);
+      expect(req.locals.paramVar).to.equal(1234);
+    });
+  
+    it('checking value retrieval from body', () => {
+      expect(!__.isNil(req.locals.bodyVar)).to.equal(true);
+      expect(req.locals.bodyVar).to.equal('1234');
+    });
+  
+    it('checking value retrieval from body \'params\' JSON string', () => {
+      expect(!__.isNil(req.locals.jsonData)).to.equal(true);
+      expect(req.locals.jsonData).to.equal('this is a string');
+    });
+  
+    it('checking value retrieval from header', () => {
+      expect(!__.isNil(req.locals.headerVar)).to.equal(true);
+      expect(req.locals.headerVar).to.equal('1234');
+    });
+  
+    it('checking value retrieval from query', () => {
+      expect(!__.isNil(req.locals.queryVar)).to.equal(true);
+      expect(req.locals.queryVar).to.equal('1234');
+    });
+  
+    it('checking value retrieval priority where variable can come from multiple sources', () => {
+      expect(!__.isNil(req.locals.multiVar)).to.equal(true);
+      expect(req.locals.multiVar).to.equal('abcd');
+    });
+  
+    it('checking that value that is not in the correct source is not retrieved', () => {
+      expect(!__.isNil(req.locals.wrongSrcVar)).to.not.equal(true);
+    });
+  
+    it('checking that missing value is not retrieved', () => {
+      expect(!__.isNil(req.locals.missingRequiredVar)).to.not.equal(true);
+    });
   });
 
   it('compileRequiredParams', () => {
+    reqUtils.retrieveParams(req, reqParams);
     sepParams = reqUtils.compileRequiredParams(req.handler);
     expect(!__.isNil(sepParams)).to.equal(true);
     expect(!__.isNil(sepParams.required)).to.equal(true);
@@ -220,12 +218,16 @@ describe('Request Utilities', () => {
   });
 
   it('hasRequiredParams', () => {
+    reqUtils.retrieveParams(req, reqParams);
+    sepParams = reqUtils.compileRequiredParams(req.handler);
     const required = reqUtils.hasRequiredParams(sepParams.required);
     expect(required.length === 1); // There should be 1 missing parameter
   });
 
   it('handleDefaults', () => {
-    reqUtils.handleDefaults(sepParams.optional);
+    reqUtils.retrieveParams(req, reqParams);
+    sepParams = reqUtils.compileRequiredParams(req.handler);
+    reqUtils.handleDefaults(req, sepParams.optional);
     expect(!__.isNil(req.locals.resetValue)).to.equal(true);
     expect(req.locals.resetValue).to.equal(1);
     expect(!__.isNil(req.locals.defaultVar)).to.equal(true);
@@ -243,271 +245,287 @@ describe('Request Utilities', () => {
     })).to.exist; // This should return true as badDefaultValidation should exist
   });
 
-  it('handleCustomError with null error', () => {
-    const errorMessage = reqUtils.handleCustomErrors();
-    expect(errorMessage.code).to.equal(500001);
-    expect(errorMessage.msg).to.equal(null);
+  describe('handleCustomError', () => {
+    it('with null error', () => {
+      const errorMessage = reqUtils.handleCustomErrors(req);
+      expect(errorMessage.code).to.equal(500001);
+      expect(errorMessage.msg).to.equal(null);
+    });
+
+    it('with empty error', () => {
+      const errorMessage = reqUtils.handleCustomErrors(req, {});
+      expect(errorMessage.code).to.equal(500001);
+      expect(errorMessage.msg).to.have.string('General');
+    });
+
+    it('with matching error and code', () => {
+      const errorMessage = reqUtils.handleCustomErrors(req, { name: 'TestError' });
+      expect(errorMessage.code).to.equal(12345);
+      expect(errorMessage.msg).to.have.string('Test1');
+    });
+
+    it('with matching error and but no code', () => {
+      const errorMessage = reqUtils.handleCustomErrors(req, { name: 'OtherTestError' });
+      expect(errorMessage.code).to.equal(98765);
+      expect(errorMessage.msg).to.have.string('Other');
+    });
+
+    it('with Error class', () => {
+      const errorMessage = reqUtils.handleCustomErrors(req, new Error('Error object'));
+      expect(errorMessage.code).to.equal(500001);
+      expect(errorMessage.msg).to.have.string('Error');
+    });
   });
 
-  it('handleCustomError with empty error', () => {
-    const errorMessage = reqUtils.handleCustomErrors({});
-    expect(errorMessage.code).to.equal(500001);
-    expect(errorMessage.msg).to.have.string('General');
-  });
+  describe('handleRequestSync', () => {
+    it('normal function', (done) => {
+      req.hasData = false;
+      req.hasError = false;
+      req.respCode = null;
+      req.locals = null;
+      req.authContext = { super: true };
+      reqUtils.handleRequestSync(
+        {
+          params: __.omit(reqParams, ['badValidation', 'badDefaultValidation', 'missingRequiredVar']),
+          authContext: { super: true }
+        },
+        (locals, _req, _res_, _next) => {
+          expect(!__.isNil(_req.locals)).to.equal(true);
+          expect(!__.isNil(locals)).to.equal(true);
+          done();
+        },
+        req, {}, () => { }
+      );
+    });
 
-  it('handleCustomError with matching error and code', () => {
-    const errorMessage = reqUtils.handleCustomErrors({ name: 'TestError' });
-    expect(errorMessage.code).to.equal(12345);
-    expect(errorMessage.msg).to.have.string('Test1');
-  });
-
-  it('handleCustomError with matching error and but no code', () => {
-    const errorMessage = reqUtils.handleCustomErrors({ name: 'OtherTestError' });
-    expect(errorMessage.code).to.equal(98765);
-    expect(errorMessage.msg).to.have.string('Other');
-  });
-
-  it('handleCustomError with Error class', () => {
-    const errorMessage = reqUtils.handleCustomErrors(new Error('Error object'));
-    expect(errorMessage.code).to.equal(500001);
-    expect(errorMessage.msg).to.have.string('Error');
-  });
-
-
-  it('handleRequest', (done) => {
-    req.hasData = false;
-    req.hasError = false;
-    req.respCode = null;
-    req.locals = null;
-    req.authContext.super = true;
-    reqUtils.handleRequest(
-      {
-        params: __.omit(reqParams, ['badValidation', 'badDefaultValidation', 'missingRequiredVar']),
-        security: { super: true }
-      },
-      () => {
-        expect(!__.isNil(req.locals)).to.equal(true);
-        done();
-      },
-      () => { }
-    );
-  });
-
-  it('handleRequest with thrown error', (done) => {
-    req.hasData = false;
-    req.hasError = false;
-    req.respCode = null;
-    req.locals = null;
-    req.authContext.super = true;
-    reqUtils.handleRequest(
-      {
-        params: __.omit(reqParams, ['badValidation', 'badDefaultValidation', 'missingRequiredVar']),
-        security: { super: true }
-      },
-      () => {
-        throw new Error('This is an error');
-      },
-      () => {
-        expect(req.respCode).to.equal(500001);
-        done();
-      }
-    );
-  });
-
-  it('handleRequest with incorrect auth context', (done) => {
-    reqUtils.options.checkPermissions = ((_req) => { return false; });
-    req.hasData = false;
-    req.hasError = false;
-    req.respCode = null;
-    req.locals = null;
-    req.authContext.super = false;
-    reqUtils.handleRequest(
-      {
-        params: __.omit(reqParams, ['badValidation', 'badDefaultValidation', 'missingRequiredVar']),
-        security: { super: true }
-      },
-      () => { },
-      (err) => {
-        if (err) {
-          expect(req.respCode).to.equal(403000);
+    it('with thrown error', (done) => {
+      req.hasData = false;
+      req.hasError = false;
+      req.respCode = null;
+      req.locals = null;
+      req.authContext = { super: true };
+      reqUtils.handleRequestSync(
+        {
+          params: __.omit(reqParams, ['badValidation', 'badDefaultValidation', 'missingRequiredVar']),
+          authContext: { super: true }
+        },
+        () => {
+          throw new Error('This is an error');
+        },
+        req, {},
+        () => {
+          expect(req.respCode).to.equal(500001);
+          done();
         }
-        done();
-      }
-    );
-  });
+      );
+    });
 
-  it('handleRequest with incorrect protocol security (requires HTTPS)', (done) => {
-    reqUtils.options.checkPermissions = ((_req) => { return false; });
-    req.hasData = false;
-    req.hasError = false;
-    req.respCode = null;
-    req.locals = null;
-    req.authContext.super = true;
-    req.secure = false;
-    reqUtils.handleRequest(
-      {
-        params: __.omit(reqParams, ['badValidation', 'badDefaultValidation', 'missingRequiredVar']),
-        security: { super: true },
-        secure: true
-      },
-      () => { },
-      (err) => {
-        if (err) {
-          expect(req.respCode).to.equal(403001);
+    it('with incorrect auth context', (done) => {
+      reqUtils.options.checkPermissions = ((_req) => { return false; });
+      req.hasData = false;
+      req.hasError = false;
+      req.respCode = null;
+      req.locals = null;
+      req.authContext = { super: false };
+      reqUtils.handleRequestSync(
+        {
+          params: __.omit(reqParams, ['badValidation', 'badDefaultValidation', 'missingRequiredVar']),
+          authContext: { super: true }
+        },
+        () => { },
+        req, {}, 
+        (err) => {
+          if (err) {
+            expect(req.respCode).to.equal(403000);
+          }
+          done();
         }
-        done();
-      }
-    );
-  });
+      );
+    });
 
-  it('handleRequest with no permissions', (done) => {
-    reqUtils.options.checkPermissions = ((_req) => { return false; });
-    req.hasData = false;
-    req.hasError = false;
-    req.respCode = null;
-    req.locals = null;
-    req.authContext.super = true;
-    reqUtils.handleRequest(
-      {
-        params: __.omit(reqParams, ['badValidation', 'badDefaultValidation', 'missingRequiredVar']),
-        security: { super: true }
-      },
-      () => { },
-      (err) => {
-        if (err) {
-          expect(req.respCode).to.equal(403000);
+    it('with incorrect protocol security (requires HTTPS)', (done) => {
+      reqUtils.options.checkPermissions = ((_req) => { return false; });
+      req.hasData = false;
+      req.hasError = false;
+      req.respCode = null;
+      req.locals = null;
+      req.authContext = { super: true };
+      req.secure = false;
+      reqUtils.handleRequestSync(
+        {
+          params: __.omit(reqParams, ['badValidation', 'badDefaultValidation', 'missingRequiredVar']),
+          authContext: { super: true },
+          forceTls: true
+        },
+        () => { },
+        req, {},
+        (err) => {
+          if (err) {
+            expect(req.respCode).to.equal(403001);
+          }
+          done();
         }
-        done();
-      }
-    );
-  });
+      );
+    });
 
-  it('handleRequest with invalid parameters', (done) => {
-    reqUtils.options.checkPermissions = ((_req) => { return true; });
-    req.hasData = false;
-    req.hasError = false;
-    req.respCode = null;
-    req.locals = null;
-    req.authContext.super = true;
-    reqUtils.handleRequest(
-      {
-        params: __.omit(reqParams, ['badDefaultValidation', 'missingRequiredVar']),
-        security: { super: true }
-      },
-      () => { },
-      (err) => {
-        if (err) {
-          expect(req.respCode).to.equal(400002);
+    it('with no permissions', (done) => {
+      reqUtils.options.checkPermissions = ((_req) => { return false; });
+      req.hasData = false;
+      req.hasError = false;
+      req.respCode = null;
+      req.locals = null;
+      req.authContext = { super: true };
+      reqUtils.handleRequestSync(
+        {
+          params: __.omit(reqParams, ['badValidation', 'badDefaultValidation', 'missingRequiredVar']),
+          authContext: { super: true }
+        },
+        () => { },
+        req, {},
+        (err) => {
+          if (err) {
+            expect(req.respCode).to.equal(403000);
+          }
+          done();
         }
-        done();
-      }
-    );
+      );
+    });
+
+    it('with invalid parameters', (done) => {
+      reqUtils.options.checkPermissions = ((_req) => { return true; });
+      req.hasData = false;
+      req.hasError = false;
+      req.respCode = null;
+      req.locals = null;
+      req.authContext = { super: true };
+      reqUtils.handleRequestSync(
+        {
+          params: __.omit(reqParams, ['badDefaultValidation', 'missingRequiredVar']),
+          authContext: { super: true }
+        },
+        () => { },
+        req, {},
+        (err) => {
+          if (err) {
+            expect(req.respCode).to.equal(400002);
+          }
+          done();
+        }
+      );
+    });
+
+    it('with missing required', (done) => {
+      req.hasData = false;
+      req.hasError = false;
+      req.respCode = null;
+      req.locals = null;
+      req.authContext = { super: true };
+      reqUtils.handleRequestSync(
+        {
+          params: __.omit(reqParams, ['badValidation', 'badDefaultValidation']),
+          authContext: { super: true }
+        },
+        () => { },
+        req, {},
+        (err) => {
+          if (err) {
+            expect(req.respCode).to.equal(400001);
+          }
+          done();
+        }
+      );
+    });
   });
 
-  it('handleRequest with missing required', (done) => {
-    req.hasData = false;
-    req.hasError = false;
-    req.respCode = null;
-    req.locals = null;
-    req.authContext.super = true;
-    reqUtils.handleRequest(
-      {
-        params: __.omit(reqParams, ['badValidation', 'badDefaultValidation']),
-        security: { super: true }
-      },
-      () => { },
-      (err) => {
-        if (err) {
+  describe('handleRequest', () => {
+    it('normal function', (done) => {
+      req.hasData = false;
+      req.hasError = false;
+      req.respCode = null;
+      req.locals = null;
+      req.authContext = { super: true };
+      reqUtils.handleRequest(
+        {
+          params: __.omit(reqParams, ['badValidation', 'badDefaultValidation', 'missingRequiredVar']),
+          authContext: { super: true }
+        },
+        () => { },
+        req, {},
+        (_req) => {
+          expect(!__.isNil(_req.locals)).to.equal(true);
+        }
+      )
+        .then(() => { done(); })
+        .catch((err) => { done(err); });
+    });
+
+    it('with thrown error', (done) => {
+      req.hasData = false;
+      req.hasError = false;
+      req.respCode = null;
+      req.locals = null;
+      req.authContext = { super: true };
+      reqUtils.handleRequest(
+        {
+          params: __.omit(reqParams, ['badValidation', 'badDefaultValidation', 'missingRequiredVar']),
+          authContext: { super: true }
+        },      
+        () => {
+          throw new Error('This is an error');
+        },
+        req, {},
+        () => {
+          expect(req.respCode).to.equal(500001);
+        }
+      )
+        .then(() => { done(); })
+        .catch((err) => { done(err); });
+    });
+
+    it('with missing required', (done) => {
+      req.hasData = false;
+      req.hasError = false;
+      req.respCode = null;
+      req.locals = null;
+      req.authContext = { super: true };
+      reqUtils.handleRequest(
+        {
+          params: __.omit(reqParams, ['badValidation', 'badDefaultValidation']),
+          authContext: { super: true }
+        },
+        () => { },
+        req, {},
+        () => { }
+      )
+        .then(() => {})
+        .catch(() => {
           expect(req.respCode).to.equal(400001);
-        }
-        done();
-      }
-    );
-  });
+          done();
+        });
+    });
 
-  it('handleRequestAsync', (done) => {
-    req.hasData = false;
-    req.hasError = false;
-    req.respCode = null;
-    req.locals = null;
-    req.authContext.super = true;
-    reqUtils.handleRequestAsync(
-      {
-        params: __.omit(reqParams, ['badValidation', 'badDefaultValidation', 'missingRequiredVar']),
-        security: { super: true }
-      },
-      (_req) => {
-        expect(!__.isNil(_req.locals)).to.equal(true);
-      }
-    )
-      .then(() => { done(); })
-      .catch(() => { });
-  });
+    // it('handleRequestSync with multiple invalid parameters', (done) => {
+    //   reqUtils.options.checkPermissions = ((_req) => { return true; });
+    //   req.hasData = false;
+    //   req.hasError = false;
+    //   req.respCode = null;
+    //   req.locals = null;
+    //   req.authContext = { super: true };
+    //   reqParams.missingRequiredVar2 = { type: 'string', required: true, source: ['body'] }
+    //   reqUtils.handleRequest(
+    //     {
+    //       params: __.omit(reqParams, ['badDefaultValidation', 'missingRequiredVar']),
+    //       authContext: { super: true }
+    //     },
+    //     () => { },
+    //     (err) => {
+    //       if (err) {
+    //         expect(req.respCode).to.equal(400001);
+    //       }
+    //       done();
+    //     }
+    //   );
+    // });
 
-  it('handleRequestAsync with thrown error', (done) => {
-    req.hasData = false;
-    req.hasError = false;
-    req.respCode = null;
-    req.locals = null;
-    req.authContext.super = true;
-    reqUtils.handleRequestAsync(
-      {
-        params: __.omit(reqParams, ['badValidation', 'badDefaultValidation', 'missingRequiredVar']),
-        security: { super: true }
-      },
-      () => {
-        throw new Error('This is an error');
-      },
-      () => {
-        expect(req.respCode).to.equal(500001);
-      }
-    )
-      .then(() => { done(); })
-      .catch(() => {});
   });
-
-  it('handleRequestAsync with missing required', (done) => {
-    req.hasData = false;
-    req.hasError = false;
-    req.respCode = null;
-    req.locals = null;
-    req.authContext.super = true;
-    reqUtils.handleRequestAsync(
-      {
-        params: __.omit(reqParams, ['badValidation', 'badDefaultValidation']),
-        security: { super: true }
-      },
-      () => { },
-      () => { }
-    )
-      .then(() => {
-      })
-      .catch(() => {
-        expect(req.respCode).to.equal(400001);
-        done();
-      });
-  });
-
-  // it('handleRequest with multiple invalid parameters', (done) => {
-  //   reqUtils.options.checkPermissions = ((_req) => { return true; });
-  //   req.hasData = false;
-  //   req.hasError = false;
-  //   req.respCode = null;
-  //   req.locals = null;
-  //   req.authContext.super = true;
-  //   reqParams.missingRequiredVar2 = { type: 'string', required: true, source: ['body'] }
-  //   reqUtils.handleRequest(
-  //     {
-  //       params: __.omit(reqParams, ['badDefaultValidation', 'missingRequiredVar']),
-  //       security: { super: true }
-  //     },
-  //     () => { },
-  //     (err) => {
-  //       if (err) {
-  //         expect(req.respCode).to.equal(400001);
-  //       }
-  //       done();
-  //     }
-  //   );
-  // });
 });
