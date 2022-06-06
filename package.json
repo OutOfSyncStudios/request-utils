@@ -1,6 +1,6 @@
 {
   "name": "@outofsync/request-utils",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "A library to process HTTP Request parameters and processes",
   "main": "index.js",
   "types": "index.d.ts",
@@ -10,7 +10,7 @@
     "test": "npm run lint && npm run test:only",
     "test:only": "nyc mocha --config .mocharc.js --exit",
     "test:watch": "nodemon --exec mocha --bail",
-    "coverage": "nyc --reporter=lcov mocha --exit && cat ./coverage/lcov.info | codacy-coverage"
+    "coverage": "nyc --reporter=lcov mocha --exit"
   },
   "repository": {
     "type": "git",
@@ -42,7 +42,6 @@
   "devDependencies": {
     "@types/node": "^17.0.32",
     "chai": "^4.3.4",
-    "codacy-coverage": "^3.4.0",
     "eslint": "^8.15.0",
     "mocha": "^10.0.0",
     "nyc": "^15.1.0"

@@ -61,12 +61,21 @@ jobs:
           npm run test      
         env:
           NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          CODACY_PROJECT_TOKEN:  ${{ secrets.CODACY_PROJECT_TOKEN }}
+
+      - name: Generate Coverage Report
+        shell: bash
+        run: |
+          npm run coverage || true
+
+      - name: Run codacy-coverage-reporter
+        uses: codacy/codacy-coverage-reporter-action@v1
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          coverage-reports: ./converage/lcov.info 
 
       - name: 'NPM Publish'
         shell: bash
         run: |
-          npm run coverage || true
           npm publish || true
         env:
           NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
